@@ -1,0 +1,269 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+%\usepackage{biblatex}
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{macros}
+
+\DeclareMathAlphabet{\mymathbb}{U}{bbold}{m}{n}
+
+%\addbibresource{proposal.bib} 
+
+\title{Efficient Synchronization of Recursively Partitionable Data
+Structures}
+\author{Aljoscha Meyer}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Given two nodes in a distributed system, each of them holding a data
+structure, one or both of them might need to update their local replica
+based on the data available at the other node. An efficient solution
+should avoid redundantly sending data to a node which already holds it.
+
+We give conceptually simple yet asymptotically efficient probabilistic
+solutions based on recursively exchanging fingerprints for data
+structures of exponentially decreasing size, obtained by recursively
+partitioning the data structures. We apply the technique to sets, maps
+and radix trees. For data structures containing n items, this leads to
+O(log(n)) round-trips. We give a scheme by which the fingerprints can be
+computed in O(log(n)) time, based on an auxiliary data structure which
+requires O(n) space and which can be updated to reflect changes to the
+underlying data structure in O(log(n)) time.
+
+To minimize round-trips, the technique requires up to O(n) space per
+synchronization session. It can be adapted to require only a bounded
+amount of memory, which is essential for robust, scalable
+implementations. While this increases the worst-case number of
+round-trips, it guarantees continuous progress, in particular even in
+adversarial environments.
+\end{abstract}
+
+\section{Introduction}\label{introduction}
+
+One of the problems that needs to be solved when designing a distributed
+system is how to efficiently synchronize data between nodes. Two nodes
+may each hold a particular set of data, and may then wish to exchange
+the ideally minimum amount of information until they both reach the same
+state. Typical ways in which this can happen are one node taking on the
+state of the other, or both nodes ending up with the union of
+information available between the two of them.
+
+Distributed version control systems can be regarded as an example of the
+latter case: users independently create new objects which describe
+changes to a directory, and when connecting to each other, they both
+fetch all new updates from the other in order to obtain a (more)
+complete version history. Regarded more abstractly, the two nodes
+compute the union of the sets of objects they store. A version control
+system might attempt to leverage structured information about those
+objects, such as a happened-before relation, but this does not lead to
+good worst-case guarantees. The set reconciliation protocol we give
+guarantees the exchange to only take a number of rounds logarithmic in
+the number of objects.
+
+A different example are peer-to-peer publish-subscribe systems such as
+Secure Scuttlebutt~\cite{tarr2019secure}. A node in the system can subscribe to
+any number of topics, and nodes continuously synchronize all topics in
+common with other nodes encountered on an overlay network. Scuttlebutt achieves
+efficient synchronization by enforcing a linear happened-before
+relation between messages published to the same topic, i.e.~each message
+is assigned a unique sequence number that is one greater than the
+sequence number of the previous message. When two nodes share interest
+in a topic, they exchange the greatest sequence number they have for
+this topic, whichever node sent the greater one then knows which
+messages the other is missing.
+
+The price to pay for the efficiency is that concurrent publishing of new
+messages to the same topic is forbidden, since it would lead to
+different messages with the same sequence number, breaking correctness
+of the synchronization procedure. An unordered pubsub mechanism based on
+set reconciliation would be able to support concurrent publishing, the
+other design aspects such as the overlay network could be left
+unchanged.
+
+An example from a less decentralized setting are incremental software
+updates. A server might host a new version of an operating system, users
+running an old version want to efficiently download the changes. An
+almost identical problem is efficiently creating a backup of a file
+system to a server already holding an older backup. Both of these
+examples can abstractly be regarded as updating a map from file paths to
+file contents. Our protocol for mirroring maps could be used for
+determining which files need to be updated. The protocol allows
+synchronizing the actual files via an arbitrary nested synchronization
+protocol, e.g.~rsync~\cite{tridgell1996rsync}.
+
+\subsection{Efficiency Criteria}\label{efficiency-criteria}
+
+(These are notes, I cut the prose version to shorten the proposal)
+
+\begin{itemize}
+\item number of round-trips
+\item total bandwidth usage
+\item computation time complexity per round-trip
+\item space complexity per round-trip
+\item space complexity for auxiliary data structures
+\item time complexity for keeping auxiliary data structure up to date as the main data structure is being modified
+\end{itemize}
+
+%There are a variety of criteria by which to evaluate a synchronization
+%protocol. We exemplify them by the trivial synchronization protocol,
+%which consists of both peers immediately sending all their data to the
+%other peer.
+%
+%Let n be the number of items held by peer A, and m the number of items
+%held by peer B. To simplify things we assume for now that all items have
+%the same size in bytes.
+%
+%The most obvious efficiency criteria are the \textbf{total bandwidth}
+%(O(n + m) bytes for the trivial protocol) and the number of
+%\textbf{round-trips} ($1 \in O(1)$ for the trivial protocol).
+%
+%Efficiently using the network is not everything, the computational
+%\textbf{time complexity per round-trip} must be feasible so that
+%computers can actually run the protocol. It is lower-bounded by the
+%amount of bytes sent in a given round, for the trivial protocol it is
+%O(n + m).
+%
+%Similarly, the \textbf{space complexity per round-trip} plays a relevant
+%role, since computers have only a limited amount of memory. In
+%particular, if an adversarial peer can make a node run out of memory,
+%the protocol can only be run in trusted environments. Even then, when
+%non-malicious nodes of vastly differing computational capabilities
+%interact (e.g.~a microcontroller connecting to a server farm),
+%``accidental denial of service attacks'' can easily occur. Since the
+%trivial protocol does not perform any actual computation, its space
+%complexity per round-trip is in O(1).
+%
+%In addition to the space required for per-round-trip computations, an
+%implementation of a protocol might need to store auxiliary information
+%that is kept in sync with the data to be synchronized, in order to
+%achieve sufficiently efficient time and space complexity per round-trip.
+%Of interest is not only the \textbf{space for the auxiliary
+%information}, but also its \textbf{update complexity} for keeping it
+%synchronized with the underlying data.
+%
+%Any protocol design has to settle on certain trade-offs between these
+%different criteria, which will make it suitable for certain use cases,
+%but unsuitable for others. We do believe that our designs occupy a
+%useful place in the design space that is applicable to many relevant
+%problems, such as those mentioned in the introduction.
+%
+%A final, ``soft'' criterium is that of simplicity. While ultimately time
+%and space complexities should guide adoption decisions, complicated
+%designs are often a good indicator that the protocol will never see any
+%deployment. Our designs require merely comparisons of (sums of) hashes,
+%and the auxiliary data structure that enables efficient implementation
+%is a simple balanced tree.
+%
+% TODO which peers have which load
+
+\subsection{Recursively Comparing
+Fingerprints}\label{recursively-comparing-fingerprints}
+
+We conclude the introduction with a brief sketch of a set reconciliation
+protocol (i.e.~a protocol for computing the union of two sets on
+different machines) that exemplifies the core ideas. The protocol
+leverages the fact that sets can be partitioned into a number of smaller
+subsets. The protocol assumes that the sets contain elements from
+universe on which there is a total order based on which intervals can be
+defined, and that nodes can compute fingerprints for any subset of the
+universe.
+
+Suppose for example two nodes A, B each hold a set of natural numbers.
+They can reconcile all numbers within an interval as follows: A computes
+a fingerprint over all the numbers it holds within the interval and then sends this
+fingerprint to B, together with the interval boundaries. B then computes
+the fingerprint of all numbers it holds within that same interval. There
+are three possible cases:
+
+\begin{itemize}
+\item
+  B computed the same fingerprint it received, then the interval has
+  been fully reconciled and the protocol terminates.
+\item
+  B has no numbers within the interval, B then notifies A, A then
+  transmits all its numbers from the interval, and the interval has been
+  fully reconciled.
+\item
+  Otherwise, B splits the interval into two sub-intervals, such that B
+  has a roughly equal number of numbers within each interval. B then
+  initiates reconciliation for both of these intervals, the roles A and
+  B reverse.
+\end{itemize}
+
+Crucially, in the last case, the two recursive protocol invocations can
+be performed in parallel. The number of parallel sessions increases
+exponentially, so the original interval is being reconciled in a number
+of rounds logarithmic in the greater number of items held by any node
+within that interval.
+
+The remainder of this thesis fleshes out details and applies the same
+idea to some other data structures. The viability of this approach
+hinges on the efficient computation of fingerprints, which is discussed
+and solved in chapter 2. We then give a thorough definition of the set
+conciliation protocol in chapter 3, and prove its correctness and its
+complexity guarantees. Chapter 4 gives a more concrete protocol that
+allows nodes to enforce limits on the amount of computational resources
+they spend, at the cost of increasing the number of roundtrips if these
+resource limits are reached. Chapter 5 shows how to apply the same basic
+ideas to k-d-trees, maps, tries and radix trees, and briefly discusses
+why it does not make sense to apply it to arrays. Chapter 6
+gives an overview of related work and justifies the chosen approach. We
+conclude in chapter 7.
+
+\section{Computing Fingerprints}\label{computing-fingerprints}
+
+(Again only a minimal explanation to keep the proposal shorter): Let $U$ be the set of items that can be placed inside a data structure. Let $\leq$ be a total order on $U$. For $x, y \in U$, $x \leq y$ and $A \subseteq U$, we write $\redInt{x}{y}{A}$ to denote the set $\{a \in A | x \leq a < y\}$.
+
+Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$, e.g. the set of k-bit integers for some natural number $k$.
+Let $\oplus: H \times H \rightarrow H$ be a function such that $(H, \oplus, \mymathbb{0})$ form a group with neutral element $\mymathbb{0} \in H$, e.g. addition modulo $k$ with neutral element $0$.
+
+We write $f(X)$ for the fingerprint of a set of items $X$, which is the same as the fingerprint for the ordered list obtained by sorting $X$ according to $\leq$, denoted as $f(x_0, x_1, \ldots)$ and defined as the sum over all $h(x_1)$:
+
+\begin{align*}
+f() &= \mymathbb{0}\\
+f(x_0, x_1, \ldots) &= h(x_0) \oplus f(x_1, \ldots)\\
+\end{align*}
+
+Observe that $f(\redInt{x}{y}{A}) = f(\redInt{min(A)}{y}{A}) \ominus f(\redInt{min(A)}{x}{A})$. For efficient computation of fingerprints for arbitrary intervals it thus suffices to be able to efficiently compute the sum of hashes over arbitrary prefixes of $A$ sorted according to $\leq$.
+
+To that end, store $A$ in a balanced search tree that holds the sum over the hashes of all descendents in every internal vertex, and the elements of $A$ in the leaves (this can be maintained as a self-balancing tree). $f(\redInt{min(A)}{x}{A})$ can then be computed in $O(log(n))$ time by traversing from the root to $x$ and summing over the hashes stored in the left children of all vertices encountered in the traversal.
+
+\section{Related Work}\label{related-work}
+
+(I'm giving a very brief, very opinionated summary for the proposal, this is not meant as an actual draft for the section).
+
+The literature for set reconciliation is fixated on minimizing roundtrips, at the cost of high computation times. \cite{minsky2003set} gives theoretical limits and a very clever protocol approaching them, but which requires $O(n^3)$ computation time per round-trip. The authors acknowledge the practical infeasibility and offer \cite{minsky2002practical}, which is also the only paper that cares whether auxiliary data structures can be efficiently synchronized with the set to reconcile as it changes. They use a simpler approach highly related to error-correcting codes: Both peers send a digest, if the digests are similar enough, the union can be computed from holding both digests and one of the sets. If they are not similar enough, the set has been too large, so they recursively reconcile partitions of the set. Unfortunately, their auxiliary data structure is not self-balancing, so their complexity guarantees degrade as the set to reconcile is being modified.
+
+More recent work such as \cite{eppstein2011s} or \cite{ozisik2019graphene} focuses on invertible bloom filters, and fully embraces taking $O(n)$ computation time per synchronization session. The probabilistic guarantees also involve enough math with actual numbers to require some healthy suspicion.
+
+All of the previous work assumes that the items to be synchronized all have equal and relatively small size, which our approach does not require. None of the literature approaches utilize any structure of the data, whereas we can easily reconcile certain subsets (e.g. all data from within a timeframe if the total order being used sorts by timestamp).
+
+I am not aware of any literature at all that acknowledges the fact that the participating peers only have finite memory available, particularly a server which synchronizes with many peers concurrently has to enforce low memory consumption per session. Any implementation of a protocol not acknowledging this will simply crash at some point.
+
+Filesystem synchronization literature usually focuses on variants of rsync to optimize the single-file case, efficiently determining which files need updating is rarely discussed. Practical implementations usually sort all filenames, concatenate them, and then run their particular rsync the variant on that string. Using map synchronization should be more efficient.
+
+The basic idea of adding up hashes in a tree is not particularly original, e.g. the CCNx  0.8 Sync protocol~\cite{shang2017survey} does the same to solve a specific goal in a specific context.  This thesis highlights the concept as a standalone algorithmic solution to a general problem, examines the concept more closely (discussing choice of the group operation, security issues, etc.), adapts it to deal with bounded memory, and applies it to more data structures than just sets.
+
+\section{Work Plan}
+
+\begin{itemize}
+\item 1 - 2 weeks: fingerprint chapter
+\item 1 week: set reconciliation chapter
+\item 2 weeks: bounded-memory set reconciliation chapter
+\item 2 weeks: synchronizing other data structures chapter
+\item 2 weeks: introduction, conclusion, abstract, coherence, polishing
+\item 4 - 8 weeks: slack, no matter how accurate those estimates, nobody keeps self-inflicted deadlines
+\end{itemize}
+
+Possibly a chapter discussing more specifics that would occur when plucking set reconciliation into a scuttlebutt-like architecture. Would highlight a context in which the complexity trade-offs are better suited than those of the related literature.
+
+Actual implementation work, benchmarking? Probably too time intensive, but who knows.
+
+\bibliographystyle{alphaurl}
+\bibliography{proposal}
+
+\end{document}
