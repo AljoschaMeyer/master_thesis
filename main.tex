@@ -1,0 +1,72 @@
+\documentclass[12pt,twoside]{report}
+\usepackage[utf8]{inputenc}
+
+\usepackage[a4paper,width=150mm,top=25mm,bottom=25mm]{geometry}
+
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\usepackage{enumitem}
+\setlist[description]{leftmargin=\parindent,labelindent=\parindent}
+\renewcommand{\epsilon}{\varepsilon}
+
+\usepackage{macros}
+
+\title{
+{Efficient Synchronization of Recursively Partitionable Data Structures}\\
+{\large Technische Universität Berlin}
+}
+\author{Aljoscha Meyer}
+
+\begin{document}
+\maketitle
+
+\input{abstract}
+
+\tableofcontents
+
+\chapter{Introduction}
+\label{introduction}
+\input{chapters/introduction}
+
+\chapter{Computing Fingerprints}
+\label{fingerprints}
+\input{chapters/fingerprints}
+
+\chapter{Basic Set Reconciliation}
+\label{basic-set-reconciliation}
+\input{chapters/basic_set_reconciliation}
+
+\chapter{Related Work}
+\label{related-work}
+\input{chapters/related_work}
+
+
+
+\chapter{Work Plan}
+
+\begin{itemize}
+\item 1 - 2 weeks: fingerprint chapter
+\item 1 week: set reconciliation chapter
+\item 2 weeks: bounded-memory set reconciliation chapter
+\item 2 weeks: synchronizing other data structures chapter
+\item 2 weeks: introduction, conclusion, abstract, coherence, polishing
+\item 4 - 8 weeks: slack, no matter how accurate those estimates, nobody keeps self-inflicted deadlines
+\end{itemize}
+
+Possibly a chapter discussing more specifics that would occur when plugging set reconciliation into a scuttlebutt-like architecture. Would highlight a context in which the complexity trade-offs are better suited than those of the related literature.
+
+Actual implementation work, benchmarking? Probably too time intensive, but who knows.
+
+\bibliographystyle{alphaurl}
+\bibliography{main}
+
+\end{document}

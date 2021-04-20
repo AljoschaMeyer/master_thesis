@@ -1,0 +1,15 @@
+% !TEX root = main.tex
+
+(I'm giving a very brief, very opinionated summary for the proposal, this is not meant as an actual draft for the section).
+
+The literature for set reconciliation is fixated on minimizing roundtrips, at the cost of high computation times. \cite{minsky2003set} gives theoretical limits and a very clever protocol approaching them, but which requires $O(n^3)$ computation time per round-trip. The authors acknowledge the practical infeasibility and offer \cite{minsky2002practical}, which is also the only paper that cares whether auxiliary data structures can be efficiently synchronized with the set to reconcile as it changes. They use a simpler approach highly related to error-correcting codes: Both peers send a digest, if the digests are similar enough, the union can be computed from holding both digests and one of the sets. If they are not similar enough, the set has been too large, so they recursively reconcile partitions of the set. Unfortunately, their auxiliary data structure is not self-balancing, so their complexity guarantees degrade as the set to reconcile is being modified.
+
+More recent work such as \cite{eppstein2011s} or \cite{ozisik2019graphene} focuses on invertible bloom filters, and fully embraces taking $O(n)$ computation time per synchronization session. The probabilistic guarantees also involve enough math with actual numbers to require some healthy suspicion.
+
+All of the previous work assumes that the items to be synchronized all have equal and relatively small size, which our approach does not require. None of the literature approaches utilize any structure of the data, whereas we can easily reconcile certain subsets (e.g. all data from within a timeframe if the total order being used sorts by timestamp).
+
+I am not aware of any literature at all that acknowledges the fact that the participating peers only have finite memory available, particularly a server which synchronizes with many peers concurrently has to enforce low memory consumption per session. Any implementation of a protocol not acknowledging this will simply crash at some point.
+
+Filesystem synchronization literature usually focuses on variants of rsync to optimize the single-file case, efficiently determining which files need updating is rarely discussed. Practical implementations usually sort all filenames, concatenate them, and then run their particular rsync the variant on that string. Using map synchronization should be more efficient.
+
+The basic idea of adding up hashes in a tree is not particularly original, e.g. the CCNx  0.8 Sync protocol~\cite{shang2017survey} does the same to solve a specific goal in a specific context.  This thesis highlights the concept as a standalone algorithmic solution to a general problem, examines the concept more closely (discussing choice of the group operation, security issues, etc.), adapts it to deal with bounded memory, and applies it to more data structures than just sets.

@@ -1,0 +1,75 @@
+% !TEX root = ../main.tex
+
+The protocols described in this thesis work by computing fingerprints of sets.
+This chapter defines and motivates a specific fingerprinting scheme that admits fast computation with small overhead for the storage and maintenance of auxiliary data structures.
+
+\section{Preliminary Definitions}
+
+We first state some general mathematical definitions that will be used in this chapter.
+
+\begin{definition}
+Let $U$ be a set and $\preceq$ a binary relation on $U$.
+We call $\preceq$ a \textbf{linear order} if it satisfies three properties:
+
+  \begin{description}
+    \item[anti-symmetry:] for all $x, y \in U$: if $x \preceq y$ and $y \preceq x$ then $x = y$
+    \item[transitivity:] for all $x, y, z \in U$: if $x \preceq y$ and $y \preceq z$ then $x \preceq z$
+    \item[linearity:] for all $x, y \in U$: $x \preceq y$ or $y \preceq x$
+  \end{description}
+
+If $\preceq$ is a linear order, we write $x \prec y$ to denote that $x \preceq y$ and $x \neq y$.
+\end{definition}
+
+\begin{definition}
+Let $U$ be a set, $\preceq$ a linear order on $U$, and $A \subseteq U$.
+A \textbf{binary search tree on A} is a rooted tree T with vertex set $A$ such that for any inner vertex $p$ with left child $a$ and right child $b$: $a \prec p \prec b$.
+\end{definition}
+
+\begin{definition}
+Let $T = (V, E)$ be a binary search tree and $\epsilon \in \mathbb{R}_{> 0}$.
+We call $T$ \textbf{$\epsilon$-balanced} if $\textit{height}(T) \leq \ceil*{\epsilon \cdot log_2(|V|)}$.
+Since the precise choice of $\epsilon$ will not matter for our complexity analyses, we will usually simply talk about \textbf{balanced} trees.
+\end{definition}
+
+\begin{definition}
+Let $U$ be a set, $\groupadd: U \times U \rightarrow U$, and $\neutraladd \in U$.
+We call $(U, \groupadd, \neutraladd)$ a \textbf{monoid} if it satisfies two properties:
+
+  \begin{description}
+    \item[associativity:] for all $x, y, z \in U:$ $(x \groupadd y) \groupadd z = x \groupadd (y \groupadd z)$
+    \item[neutral element:] for all $x \in U$:if $\neutraladd \groupadd x = x = x \groupadd \neutraladd$.
+  \end{description}
+\end{definition}
+
+\begin{definition}
+Let $(U, \groupadd, \neutraladd)$ be a monoid.
+We call it a \textbf{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $x \groupadd y = z$.
+\end{definition}
+
+\begin{definition}
+Let $(U, \groupadd, \neutraladd)$ be a (transitive) monoid.
+We call it a \textbf{(transitive) group} if for all $x \in U$ there exists $y \in U$ such that $x \groupadd y = \neutraladd$.
+This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
+For $x, y \in U$ we write $x \groupsubtract y$ as a shorthand for $x \groupadd \inverseadd y$.
+\end{definition}
+
+
+
+%We begin by fixing some notation.
+%We denote the set of items to be placed inside a data structure by $U$. Let $\preceq$ be a linear order on $U$. For $x, y \in U$, $x \preceq y$ and $A \subseteq U$, we write $\interval{x}{y}{A}$ to denote the set $\{a \in A | x \preceq a \prec y\}$.
+
+%Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$. 
+%
+%Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$, e.g. the set of k-bit integers for some natural number $k$.
+%Let $\oplus: H \times H \rightarrow H$ be a function such that $(H, \oplus, \mymathbb{0})$ form a group with neutral element $\mymathbb{0} \in H$, e.g. addition modulo $k$ with neutral element $0$.
+%
+%We write $f(X)$ for the fingerprint of a set of items $X$, which is the same as the fingerprint for the ordered list obtained by sorting $X$ according to $\leq$, denoted as $f(x_0, x_1, \ldots)$ and defined as the sum over all $h(x_1)$:
+%
+%\begin{align*}
+%f() &= \mymathbb{0}\\
+%f(x_0, x_1, \ldots) &= h(x_0) \oplus f(x_1, \ldots)\\
+%\end{align*}
+%
+%Observe that $f(\interval{x}{y}{A}) = f(\interval{min(A)}{y}{A}) \ominus f(\interval{min(A)}{x}{A})$. For efficient computation of fingerprints for arbitrary intervals it thus suffices to be able to efficiently compute the sum of hashes over arbitrary prefixes of $A$ sorted according to $\leq$.
+%
+%To that end, store $A$ in a balanced search tree that holds the sum over the hashes of all descendents in every internal vertex, and the elements of $A$ in the leaves (this can be maintained as a self-balancing tree). $f(\interval{min(A)}{x}{A})$ can then be computed in $O(log(n))$ time by traversing from the root to $x$ and summing over the hashes stored in the left children of all vertices encountered in the traversal.

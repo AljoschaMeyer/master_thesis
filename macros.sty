@@ -1,4 +1,23 @@
+% !TEX root = main.tex
 \ProvidesPackage{macros}
 
 
-\newcommand{\redInt}[3]{[{#1},{#2})_{#3}}
+
+\newcommand{\interval}[3]{[{#1},{#2})_{#3}}
+\newcommand{\complexity}[1]{\mathcal{O}(#1)}
+
+\DeclareMathAlphabet{\mymathbb}{U}{bbold}{m}{n}
+\newcommand{\neutraladd}[0]{\mymathbb{0}}
+
+\newcommand{\groupadd}[0]{\oplus}
+\newcommand{\groupsubtract}[0]{\ominus}
+\newcommand{\inverseadd}[1]{-{#1}}
+
+
+
+
+
+
+%environments
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
