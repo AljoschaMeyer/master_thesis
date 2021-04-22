@@ -1,7 +1,69 @@
 % !TEX root = ../main.tex
 
-In this chapter, we give a more thorough definition of the set reconciliation protocol stanched in the introduction. We prove its correctness and do a complexity analysis.
+In this chapter, we consider the set reconciliation protocol sketched in the introduction.
+We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, we prove its correctness in \cref{set-reconciliation-simple-correct}, and do a complexity analysis in \cref{set-reconciliation-simple-complexity}. \Cref{set-reconciliation-simple-optimizations} lists some optimizations which eliminate some unnecessary work from the protocol, although not effecting the asymptotic complexity. We give an example application in \cref{set-reconciliation-simple-graphs}, briefly describing synchronization of hash graphs as used in e.g. git.
+
+%\begin{definition}
+%Let $U$ be a set, let $A \subseteq U, A \neq \emptyset$ and let $\preceq$ be a linear order on $U$. The \textbf{median} of $A$ is the unique element $m \in A$ %such that $|\{a \in A | a \prec m\}| = |\{b \in A | m \prec b\}|$ if $|A|$ is odd, 
+%\end{definition}
 
 \section{Recursive Set Reconciliation}
+\label{set-reconciliation-simple-def}
 
-Food
+The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
+$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \textbf{interval fingerprints} and \textbf{items}.
+An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an item is simply some $x \in U$.
+
+When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
+
+\begin{itemize}
+  \item For every item in the message, the item is added to the locally stored set $X_i$.
+  \item For every interval fingerprint $\ifp{x}{y}{X_j}$ in the message, it does one of three things:
+  \begin{itemize}
+    \item If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, nothing happens.
+    \item If $\fp{\interval{x}{y}{X_j}} = \neutraladd$, it adds all items in $\interval{x}{y}{X_i}$ to the response.
+    \item If $\fp{\interval{x}{y}{X_j}} \neq \neutraladd = \fp{\interval{x}{y}{X_i}}$, it adds the interval fingerprint $\ifp{x}{y}{X_i} = \ifpmanual{x}{y}{\neutraladd}$ to the response.
+    \item Otherwise, it finds some middle item $m \in X_i$ that equally partitions the items of $X_i$ within the interval, i.e. $m$ is chosen such that $-1 \leq \abs{\{a \in X_i | x \preceq a \prec m\}} - \abs{\{b \in X_i | m \preceq b \prec y\}} \leq 0$. It then adds the interval fingerprints $\ifp{x}{m}{X_i}$ and $\ifp{m}{y}{X_i}$ to the response.
+  \end{itemize}
+  \item If the accumulated response is nonempty, it is sent to the other node.
+\end{itemize}
+
+To initiate reconciliation of an interval, a node sends a message consisting solely of its interval fingerprint of the interval to reconcile. TODO example figure
+
+\section{Proof of Correctness}
+\label{set-reconciliation-simple-correct}
+
+We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ after one node $\mathcal{X}_i$ has sent sent an interval fingerprint $\ifp{x}{y}{X_i}$. W.l.o.g we consider the case where $i = 0$.
+
+We prove the statement by induction on $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}}$. There are four base cases:
+
+If $\fp{\interval{x}{y}{X_0}} = \fp{\interval{x}{y}{X_1}}$, then the protocol terminates and no changes are performed by any node. Assuming no fingerprint collision occurred, $\interval{x}{y}{X_0} = \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_0}$ as desired.
+
+If $\interval{x}{y}{X_0} = \emptyset$, its fingerprint is $\neutraladd$, and $\mathcal{X}_1$ sends all items in $\interval{x}{y}{X_1}$. $\mathcal{X}_1$ does not modify the set it holds, so it ends up with $\interval{x}{y}{X_1} = \interval{x}{y}{X_1} \cup \emptyset = \interval{x}{y}{X_1} \cup \interval{x}{y}{X_0} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired. $\mathcal{X}_0$ does not receive any interval fingerprint, so it does not send a response and the protocol terminates. It adds the received items to its local copy, so it ends up with $\emptyset \cup \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
+
+If $\interval{x}{y}{X_0} \neq \emptyset$ but $\interval{x}{y}{X_1} = \emptyset$, then $\mathcal{X}_1$ responds to the interval fingerprint sent by $\mathcal{X}_0$ by sending the interval fingerprint for the same interval, which is necessarily $\ifpmanual{x}{y}{\neutraladd}$. Correctness then follows from the previous case.
+
+If $\abs{\interval{x}{y}{X_0}} = 1 = \abs{\interval{x}{y}{X_1}}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. Since the two intervals partition the original interval, if the two into votes are reconciled correctly then so is the original interval. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by a previous case, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$. If $u_0 < u_1$, then $\fp{\interval{u_1}{y}{X_0}} = \neutraladd$, this case is already covered. So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again the case where both nodes hold exactly one but different items, with the roles reversed. This time however, the initiating node holds the lesser item, so reconsiliation finishes correctly.
+
+These base cases cover all configurations where $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} \leq 2$. So let $n = \abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} > 2$, and assume that for all $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} < n$ the protocol correctly reconciles the intervals.
+
+ partitioning the interval at some item $x \preceq m \preceq y$. Since $\interval{x}{y}{X_1} = \emptyset$, so are also $\interval{x}{m}{X_1} = \emptyset$ and $\interval{m}{y}{X_1} = \emptyset$. As shown in the previous case, these subintervals are reconciled correctly, and as they partition the original interval, so is it.
+
+
+
+
+\section{Complexity Analysis}
+\label{set-reconciliation-simple-complexity}
+
+
+
+
+\section{Optimizations}
+\label{set-reconciliation-simple-optimizations}
+
+
+
+
+
+\section{Reconciling Hash Graphs}
+\label{set-reconciliation-simple-graphs}
