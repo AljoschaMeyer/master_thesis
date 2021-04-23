@@ -33,24 +33,41 @@ To initiate reconciliation of an interval, a node sends a message consisting sol
 \section{Proof of Correctness}
 \label{set-reconciliation-simple-correct}
 
-We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ after one node $\mathcal{X}_i$ has sent sent an interval fingerprint $\ifp{x}{y}{X_i}$. W.l.o.g we consider the case where $i = 0$.
+We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ after one node $\mathcal{X}_i$ has sent sent an interval fingerprint $\ifp{x}{y}{X_i}$. W.l.o.g we consider the case where $\mathcal{X}_0$ has send the interval fingerprint $\ifp{x}{y}{X_0}$.
 
-We prove the statement by induction on $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}}$. There are four base cases:
+\newcommand{\intcount}[1]{\mathit{count}_{#1}}
 
-If $\fp{\interval{x}{y}{X_0}} = \fp{\interval{x}{y}{X_1}}$, then the protocol terminates and no changes are performed by any node. Assuming no fingerprint collision occurred, $\interval{x}{y}{X_0} = \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_0}$ as desired.
+Let  and $\intcount{0} \defeq \abs{\interval{x}{y}{X_0}}$ and $\intcount{1} \defeq \abs{\interval{x}{y}{X_1}}$.
+We prove the statement by induction on $\intcount{0} + \intcount{1}$. There are four base cases:
 
-If $\interval{x}{y}{X_0} = \emptyset$, its fingerprint is $\neutraladd$, and $\mathcal{X}_1$ sends all items in $\interval{x}{y}{X_1}$. $\mathcal{X}_1$ does not modify the set it holds, so it ends up with $\interval{x}{y}{X_1} = \interval{x}{y}{X_1} \cup \emptyset = \interval{x}{y}{X_1} \cup \interval{x}{y}{X_0} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired. $\mathcal{X}_0$ does not receive any interval fingerprint, so it does not send a response and the protocol terminates. It adds the received items to its local copy, so it ends up with $\emptyset \cup \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
+\begin{caselist}
+\case[Equal Fingerprints] \label{fingerprint-eq} If $\fp{\interval{x}{y}{X_0}} = \fp{\interval{x}{y}{X_1}}$, then the protocol terminates immediately and no changes are performed by any node. Assuming no fingerprint collision occurred, $\interval{x}{y}{X_0} = \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
 
-If $\interval{x}{y}{X_0} \neq \emptyset$ but $\interval{x}{y}{X_1} = \emptyset$, then $\mathcal{X}_1$ responds to the interval fingerprint sent by $\mathcal{X}_0$ by sending the interval fingerprint for the same interval, which is necessarily $\ifpmanual{x}{y}{\neutraladd}$. Correctness then follows from the previous case.
+\case[Receiving Empty] \label{x0-empty} If $\interval{x}{y}{X_0} = \emptyset$, its fingerprint is $\neutraladd$, and $\mathcal{X}_1$ sends all items in $\interval{x}{y}{X_1}$. $\mathcal{X}_1$ does not modify the set it holds, so it ends up with $\interval{x}{y}{X_1} = \interval{x}{y}{X_1} \cup \emptyset = \interval{x}{y}{X_1} \cup \interval{x}{y}{X_0} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired. $\mathcal{X}_0$ does not receive any interval fingerprint, so it does not send a response and the protocol terminates. It adds the received items to its local copy, so it ends up with $\emptyset \cup \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
 
-If $\abs{\interval{x}{y}{X_0}} = 1 = \abs{\interval{x}{y}{X_1}}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. Since the two intervals partition the original interval, if the two into votes are reconciled correctly then so is the original interval. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by a previous case, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$. If $u_0 < u_1$, then $\fp{\interval{u_1}{y}{X_0}} = \neutraladd$, this case is already covered. So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again the case where both nodes hold exactly one but different items, with the roles reversed. This time however, the initiating node holds the lesser item, so reconsiliation finishes correctly.
+\case[Sending Empty] \label{x1-empty} If $\interval{x}{y}{X_0} \neq \emptyset$ but $\interval{x}{y}{X_1} = \emptyset$, then $\mathcal{X}_1$ responds to the interval fingerprint sent by $\mathcal{X}_0$ by sending the interval fingerprint for the same interval, which is necessarily $\ifpmanual{x}{y}{\neutraladd}$. Correctness then follows from \cref{x0-empty} with the roles reversed.
 
-These base cases cover all configurations where $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} \leq 2$. So let $n = \abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} > 2$, and assume that for all $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} < n$ the protocol correctly reconciles the intervals.
+\case[Two Singletons] \label{two-singletons} If $\intcount{0} = 1 = \intcount{1}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. Since the two intervals partition the original interval, if the two intervals are reconciled correctly then so is the original interval. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by \cref{x0-empty} with the roles reversed, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$.
 
- partitioning the interval at some item $x \preceq m \preceq y$. Since $\interval{x}{y}{X_1} = \emptyset$, so are also $\interval{x}{m}{X_1} = \emptyset$ and $\interval{m}{y}{X_1} = \emptyset$. As shown in the previous case, these subintervals are reconciled correctly, and as they partition the original interval, so is it.
+\begin{caselist}
+\case \label{two-singletons-1}  If $u_0 < u_1$, then $\fp{\interval{u_1}{y}{X_0}} = \neutraladd$, so $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is covered by \cref{x1-empty} with the roles reversed.
 
+\case So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again \cref{two-singletons}, with the roles reversed. This time however, the initiating node holds the lesser item, so \cref{two-singletons-1} applies and correctness follows.
+\end{caselist}
+\end{caselist}
 
+These base cases cover all configurations where $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} \leq 2$.
+So let $n \defeq \intcount{0} + \intcount{1} > 2$, and assume that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_0}} + \abs{\interval{x'}{y'}{X_1}} < n$ the protocol correctly reconciles the intervals.
 
+$\mathcal{X}_1$ responds with two interval fingerprints $\ifp{x}{m}{X_1}$ and $\ifp{m}{y}{X_1}$ for some $m \in X_1, x \preceq m \preceq y$.
+As these two intervals partition the original interval, if the two interval are reconciled correctly then so is the original interval.
+Note that $\abs{\interval{x}{m}{X_1}} + \abs{\interval{m}{y}{X_1}} = \intcount{1}$ and $\abs{\interval{x}{m}{X_0}} + \abs{\interval{m}{y}{X_0}} = \intcount{0}$. Since $n > 2$, at least one $\intcount{i}$ is greater than $1$, so that $\mathcal{X}_i$ will split the interval into two smaller ones, to which we can apply the induction hypothesis.
+
+\begin{caselist}
+\case If $\intcount{1} > 1$, then $\abs{\interval{x}{m}{X_1}} < \intcount{1}$, and $\abs{\interval{x}{m}{X_0}} \leq \intcount{0}$, thus $\abs{\interval{x}{m}{X_1}} + \abs{\interval{x}{m}{X_0}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_1}} + \abs{\interval{m}{y}{X_0}} < n$ follows analogously.
+
+\case Otherwise, if $\intcount{1} = 1$, then $\intcount{0} > 1$, thus $\abs{\interval{x}{m}{X_0}} < \intcount{0}$, and $\abs{\interval{x}{m}{X_1}} \leq \intcount{1}$, thus $\abs{\interval{x}{m}{X_0}} + \abs{\interval{x}{m}{X_1}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_0}} + \abs{\interval{m}{y}{X_1}} < n$ follows analogously.
+\end{caselist} 
 
 \section{Complexity Analysis}
 \label{set-reconciliation-simple-complexity}

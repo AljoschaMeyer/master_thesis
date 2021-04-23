@@ -9,7 +9,9 @@
 
 
 
-
+\RequirePackage{mathtools}
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\eqdef}{=\vcentcolon}
 
 \newcommand{\complexity}[1]{\mathcal{O}(#1)}
 
@@ -23,6 +25,55 @@
 \newcommand{\abs}[1]{|{#1}|}
 
 
+
+
+
+
+% from https://blag.nullteilerfrei.de/2013/03/07/nested-case-distinctions-in-latex/
+\usepackage{enumitem}
+\usepackage[amsthm,thmmarks]{ntheorem}
+%\usepackage{cleveref}
+\usepackage{forloop}
+
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}
+
+% At this point we create the environment for nested case distinctions.
+% Note that it is used like an enumerate environment, and you can nest
+% at most 10 layers deep. Of course, you could change that.
+% We will later define a macro \case which will be the equivalent of
+% \item, except that we can pass it an optional argument which, instead
+% of replacing the number label, adds a comment in brackets.
+
+\newlist{caselist}{enumerate}{10}
+\setlist[caselist]{itemsep=1ex,topsep=1ex,parsep=0pt,leftmargin=0pt,%
+ labelwidth=*,labelsep=1ex,align=caselabel,label*=.\arabic*}
+\setlist[caselist,1]{label=\arabic*}
+
+% The macro \thecaselabeltext serves as the optional parameter that we 
+% can later pass to the \case macro.
+
+\newcommand\thecaselabeltext{}
+\SetLabelAlign{caselabel}{\textbf{Case~#1\thecaselabeltext.}\hfil}
+
+% The following sets the cleveref label name of the first layer of cases
+% and then loops to alias all the other caselist counters. This way,
+% cleveref will display references to nested cases correctly.
+
+\crefname{caselisti}{case}{cases}
+\newcounter{i}
+\forLoop{1}{10}{i}{\crefalias{caselist\roman{i}}{caselisti}}
+
+% Now I define the \case command. We need a little macro to check whether
+% a string is empty. The \case macro will then redefine the \thecaselabeltext
+% accordingly.
+
+\makeatletter
+\def\ifempty#1{\def\@x{#1}\ifx\@x\@empty}
+\makeatother
+
+\newcommand\case[1][]{\renewcommand{\thecaselabeltext}
+ {\ifempty{#1}\else~(#1)\fi}\item}
 
 
 %environments
