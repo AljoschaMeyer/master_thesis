@@ -5,11 +5,11 @@ This chapter defines and motivates a specific fingerprinting scheme that admits 
 
 \section{Preliminary Definitions}
 
-We first state some general mathematical definitions that will be used in this chapter.
+TODO: move these to where they are needed
 
 \begin{definition}
 Let $U$ be a set and $\preceq$ a binary relation on $U$.
-We call $\preceq$ a \textbf{linear order} if it satisfies three properties:
+We call $\preceq$ a \defined{linear order on $U$} if it satisfies three properties:
 
   \begin{description}
     \item[anti-symmetry:] for all $x, y \in U$: if $x \preceq y$ and $y \preceq x$ then $x = y$
@@ -22,35 +22,35 @@ If $\preceq$ is a linear order, we write $x \prec y$ to denote that $x \preceq y
 
 \begin{definition}
 Let $U$ be a set, $\preceq$ a linear order on $U$, and $A \subseteq U$.
-A \textbf{binary search tree on A} is a rooted tree T with vertex set $A$ such that for any inner vertex $p$ with left child $a$ and right child $b$: $a \prec p \prec b$.
+A \defined{binary search tree on A} is a rooted tree T with vertex set $A$ such that for any inner vertex $p$ with left child $a$ and right child $b$: $a \prec p \prec b$.
 \end{definition}
 
 \begin{definition}
 Let $T = (V, E)$ be a binary search tree and $\epsilon \in \mathbb{R}_{> 0}$.
-We call $T$ \textbf{$\epsilon$-balanced} if $\textit{height}(T) \leq \ceil*{\epsilon \cdot log_2(|V|)}$.
-Since the precise choice of $\epsilon$ will not matter for our complexity analyses, we will usually simply talk about \textbf{balanced} trees.
+We call $T$ \defined{$\epsilon$-balanced} if $\textit{height}(T) \leq \ceil*{\epsilon \cdot log_2(|V|)}$.
+Since the precise choice of $\epsilon$ will not matter for our complexity analyses, we will usually simply talk about \defined{balanced} trees.
 \end{definition}
 
 \begin{definition}
-Let $U$ be a set, $\groupadd: U \times U \rightarrow U$, and $\neutraladd \in U$.
-We call $(U, \groupadd, \neutraladd)$ a \textbf{monoid} if it satisfies two properties:
+Let $U$ be a set, $\groupaddsym: U \times U \rightarrow U$, and $\neutraladd \in U$.
+We call $(U, \groupaddsym, \neutraladd)$ a \defined{monoid} if it satisfies two properties:
 
   \begin{description}
-    \item[associativity:] for all $x, y, z \in U:$ $(x \groupadd y) \groupadd z = x \groupadd (y \groupadd z)$
-    \item[neutral element:] for all $x \in U$:if $\neutraladd \groupadd x = x = x \groupadd \neutraladd$.
+    \item[associativity:] for all $x, y, z \in U:$ $\groupadd{(\groupadd{x}{y})}{z} = \groupadd{x}{\groupadd{y}{z}}$
+    \item[neutral element:] for all $x \in U$:if $\groupadd{\neutraladd}{x} = x = \groupadd{x}{\neutraladd}$.
   \end{description}
 \end{definition}
 
 \begin{definition}
-Let $(U, \groupadd, \neutraladd)$ be a monoid.
-We call it a \textbf{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $x \groupadd y = z$.
+Let $(U, \groupaddsym, \neutraladd)$ be a monoid.
+We call it a \defined{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = z$.
 \end{definition}
 
 \begin{definition}
-Let $(U, \groupadd, \neutraladd)$ be a (transitive) monoid.
-We call it a \textbf{(transitive) group} if for all $x \in U$ there exists $y \in U$ such that $x \groupadd y = \neutraladd$.
+Let $(U, \groupaddsym, \neutraladd)$ be a (transitive) monoid.
+We call it a \defined{(transitive) group} if for all $x \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = \neutraladd$.
 This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
-For $x, y \in U$ we write $x \groupsubtract y$ as a shorthand for $x \groupadd \inverseadd y$.
+For $x, y \in U$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
 \end{definition}
 
 

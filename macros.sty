@@ -1,11 +1,7 @@
 % !TEX root = main.tex
 \ProvidesPackage{macros}
 
-% domain specific
-\newcommand{\interval}[3]{[{#1},{#2})_{#3}}
-\newcommand{\fp}[1]{\operatorname{f}(#1)}
-\newcommand{\ifpmanual}[3]{({#1}, {#2}, {#3})}
-\newcommand{\ifp}[3]{\ifpmanual{#1}{#2}{\fp{\interval{#1}{#2}{#3}}}}
+
 
 
 
@@ -18,13 +14,14 @@
 \DeclareMathAlphabet{\mymathbb}{U}{bbold}{m}{n}
 \newcommand{\neutraladd}[0]{\mymathbb{0}}
 
-\newcommand{\groupadd}[0]{\oplus}
-\newcommand{\groupsubtract}[0]{\ominus}
+\newcommand{\groupaddsym}[0]{\oplus}
+\newcommand{\groupadd}[2]{{#1} \groupaddsym {#2}}
+\newcommand{\groupsubtract}[2]{{#1} \ominus {#2}}
 \newcommand{\inverseadd}[1]{-{#1}}
 
 \newcommand{\abs}[1]{|{#1}|}
 
-
+\newcommand{\defined}[1]{\textit{#1}}
 
 
 
@@ -79,3 +76,22 @@
 %environments
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
+
+\newtheorem{proposition}{Proposition}
+
+
+
+
+
+
+% domain specific
+\newcommand{\interval}[3]{[{#1},{#2})_{#3}}
+\newcommand{\intervalx}[3]{({#1},{#2})_{#3}}
+\newcommand{\fp}[1]{\mathit{fp}(#1)}
+\newcommand{\ifpmanual}[3]{({#1}, {#2}, {#3})}
+\newcommand{\ifp}[3]{\ifpmanual{#1}{#2}{\fp{\interval{#1}{#2}{#3}}}}
+\newcommand{\ifpempty}[2]{({#1}, {#2})}
+\newcommand{\ifpsingle}[2]{\ifpmanual{#1}{#2}{\emptyset}}
+\newcommand{\ifpcontain}[3]{\ifpmanual{#1}{#2}{\groupadd{\fp{x}}{#3}}}
+
+\newcommand{\successor}[1]{\mathit{successor({#1})}}

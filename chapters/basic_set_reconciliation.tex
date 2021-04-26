@@ -1,43 +1,50 @@
 % !TEX root = ../main.tex
 
-In this chapter, we consider the set reconciliation protocol sketched in the introduction.
-We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, we prove its correctness in \cref{set-reconciliation-simple-correct}, and do a complexity analysis in \cref{set-reconciliation-simple-complexity}. \Cref{set-reconciliation-simple-optimizations} lists some optimizations which eliminate some unnecessary work from the protocol, although not effecting the asymptotic complexity. We give an example application in \cref{set-reconciliation-simple-graphs}, briefly describing synchronization of hash graphs as used in e.g. git.
+In this chapter, we consider the set reconciliation protocol sketched in the introduction in greater detail.
+We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, and we prove its correctness in \cref{set-reconciliation-simple-correct}. \Cref{set-reconciliation-simple-optimizations} lists optimizations which eliminate unnecessary work from the protocol. We then define the proper set reconciliation protocol in \cref{set-reconciliation-def} and  do a complexity analysis in \cref{set-reconciliation-complexity}. We conclude with an example application in \cref{set-reconciliation-simple-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
 
-%\begin{definition}
-%Let $U$ be a set, let $A \subseteq U, A \neq \emptyset$ and let $\preceq$ be a linear order on $U$. The \textbf{median} of $A$ is the unique element $m \in A$ %such that $|\{a \in A | a \prec m\}| = |\{b \in A | m \prec b\}|$ if $|A|$ is odd, 
-%\end{definition}
-
-\section{Recursive Set Reconciliation}
+\section{Simple Recursive Set Reconciliation}
 \label{set-reconciliation-simple-def}
 
 The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
-$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \textbf{interval fingerprints} and \textbf{items}.
+$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{items}.
 An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an item is simply some $x \in U$.
+
+Recall that $\fp{A}$ denotes the fingerprint for $A \subseteq U$, and that $\interval{x}{y}{A} \defeq \{a \in A | x \preceq a \prec y\}$.
 
 When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
 
 \begin{itemize}
   \item For every item in the message, the item is added to the locally stored set $X_i$.
-  \item For every interval fingerprint $\ifp{x}{y}{X_j}$ in the message, it does one of three things:
-  \begin{itemize}
-    \item If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, nothing happens.
-    \item If $\fp{\interval{x}{y}{X_j}} = \neutraladd$, it adds all items in $\interval{x}{y}{X_i}$ to the response.
-    \item If $\fp{\interval{x}{y}{X_j}} \neq \neutraladd = \fp{\interval{x}{y}{X_i}}$, it adds the interval fingerprint $\ifp{x}{y}{X_i} = \ifpmanual{x}{y}{\neutraladd}$ to the response.
-    \item Otherwise, it finds some middle item $m \in X_i$ that equally partitions the items of $X_i$ within the interval, i.e. $m$ is chosen such that $-1 \leq \abs{\{a \in X_i | x \preceq a \prec m\}} - \abs{\{b \in X_i | m \preceq b \prec y\}} \leq 0$. It then adds the interval fingerprints $\ifp{x}{m}{X_i}$ and $\ifp{m}{y}{X_i}$ to the response.
-  \end{itemize}
+  \item For every interval fingerprint $\ifp{x}{y}{X_j}$ in the message, it does one of following:
+    \begin{caselist}
+      \case[Equal Fingerprints] \label{def-fingerprint-eq}  If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, nothing happens.
+      \case[Receiving Empty] If $\fp{\interval{x}{y}{X_j}} = \neutraladd$, it adds all items in $\interval{x}{y}{X_i}$ to the response.
+      \case[Sending Empty] \label{def-x1-empty} If $\fp{\interval{x}{y}{X_j}} \neq \neutraladd = \fp{\interval{x}{y}{X_i}}$, it adds the interval fingerprint $\ifp{x}{y}{X_i} = \ifpmanual{x}{y}{\neutraladd}$ to the response.
+      \case[Recursive] \label{def-recursive} Otherwise, it finds some middle item $m \in X_i$ that equally partitions the items of $X_i$ within the interval, i.e. $m$ is chosen such that $-1 \leq \abs{\{a \in X_i | x \preceq a \prec m\}} - \abs{\{b \in X_i | m \preceq b \prec y\}} \leq 0$. It then adds the interval fingerprints $\ifp{x}{m}{X_i}$ and $\ifp{m}{y}{X_i}$ to the response.
+    \end{caselist}
   \item If the accumulated response is nonempty, it is sent to the other node.
 \end{itemize}
 
-To initiate reconciliation of an interval, a node sends a message consisting solely of its interval fingerprint of the interval to reconcile. TODO example figure
+To initiate reconciliation of an interval, a node sends a message consisting solely of its interval fingerprint of the interval to reconcile.
+
+TODO example figure
 
 \section{Proof of Correctness}
 \label{set-reconciliation-simple-correct}
 
-We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ after one node $\mathcal{X}_i$ has sent sent an interval fingerprint $\ifp{x}{y}{X_i}$. W.l.o.g we consider the case where $\mathcal{X}_0$ has send the interval fingerprint $\ifp{x}{y}{X_0}$.
+We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ after one node $\mathcal{X}_i$ has sent an interval fingerprint $\ifp{x}{y}{X_i}$.
+
+The proof is necessarily rather technical, but conceptually correctness follows rather straightforwardly by induction from the fact that two sets can be reconciled by individually reconciling their partitions:
+
+\begin{proposition}
+\label{partition-union}
+Let $S = \biguplus_{i \in \mathcal{I}} S_i, T = \biguplus_{i \in \mathcal{I}} T_i$, then $S \cup T = \biguplus_{i \in \mathcal{I}} (S_i \cup T_i)$.
+\end{proposition}
 
 \newcommand{\intcount}[1]{\mathit{count}_{#1}}
 
-Let  and $\intcount{0} \defeq \abs{\interval{x}{y}{X_0}}$ and $\intcount{1} \defeq \abs{\interval{x}{y}{X_1}}$.
+Without loss of generality we consider the case where $\mathcal{X}_0$ has sent the interval fingerprint $\ifp{x}{y}{X_0}$. Let $\intcount{0} \defeq \abs{\interval{x}{y}{X_0}}$ and $\intcount{1} \defeq \abs{\interval{x}{y}{X_1}}$.
 We prove the statement by induction on $\intcount{0} + \intcount{1}$. There are four base cases:
 
 \begin{caselist}
@@ -47,40 +54,86 @@ We prove the statement by induction on $\intcount{0} + \intcount{1}$. There are 
 
 \case[Sending Empty] \label{x1-empty} If $\interval{x}{y}{X_0} \neq \emptyset$ but $\interval{x}{y}{X_1} = \emptyset$, then $\mathcal{X}_1$ responds to the interval fingerprint sent by $\mathcal{X}_0$ by sending the interval fingerprint for the same interval, which is necessarily $\ifpmanual{x}{y}{\neutraladd}$. Correctness then follows from \cref{x0-empty} with the roles reversed.
 
-\case[Two Singletons] \label{two-singletons} If $\intcount{0} = 1 = \intcount{1}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. Since the two intervals partition the original interval, if the two intervals are reconciled correctly then so is the original interval. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by \cref{x0-empty} with the roles reversed, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$.
+\case[Two Singletons] \label{two-singletons} If $\intcount{0} = 1 = \intcount{1}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. By \cref{partition-union} we only need to show that these two intervals are being reconciled correctly. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by \cref{x0-empty} with the roles reversed, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$.
 
 \begin{caselist}
 \case \label{two-singletons-1}  If $u_0 < u_1$, then $\fp{\interval{u_1}{y}{X_0}} = \neutraladd$, so $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is covered by \cref{x1-empty} with the roles reversed.
 
-\case So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again \cref{two-singletons}, with the roles reversed. This time however, the initiating node holds the lesser item, so \cref{two-singletons-1} applies and correctness follows.
+\case \label{two-singletons-2} So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again \cref{two-singletons}, with the roles reversed. This time however, the initiating node holds the lesser item, so \cref{two-singletons-1} applies and correctness follows.
 \end{caselist}
 \end{caselist}
 
 These base cases cover all configurations where $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} \leq 2$.
-So let $n \defeq \intcount{0} + \intcount{1} > 2$, and assume that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_0}} + \abs{\interval{x'}{y'}{X_1}} < n$ the protocol correctly reconciles the intervals.
+So let $n \defeq \intcount{0} + \intcount{1} > 2$, and assume that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_0}} + \abs{\interval{x'}{y'}{X_1}} < n$ the protocol correctly reconciles $\interval{x'}{y'}{X_0}$ and $\interval{x'}{y'}{X_1}$.
 
 $\mathcal{X}_1$ responds with two interval fingerprints $\ifp{x}{m}{X_1}$ and $\ifp{m}{y}{X_1}$ for some $m \in X_1, x \preceq m \preceq y$.
-As these two intervals partition the original interval, if the two interval are reconciled correctly then so is the original interval.
+By \cref{partition-union} we only need to show that these two intervals are being reconciled correctly.
 Note that $\abs{\interval{x}{m}{X_1}} + \abs{\interval{m}{y}{X_1}} = \intcount{1}$ and $\abs{\interval{x}{m}{X_0}} + \abs{\interval{m}{y}{X_0}} = \intcount{0}$. Since $n > 2$, at least one $\intcount{i}$ is greater than $1$, so that $\mathcal{X}_i$ will split the interval into two smaller ones, to which we can apply the induction hypothesis.
 
 \begin{caselist}
 \case If $\intcount{1} > 1$, then $\abs{\interval{x}{m}{X_1}} < \intcount{1}$, and $\abs{\interval{x}{m}{X_0}} \leq \intcount{0}$, thus $\abs{\interval{x}{m}{X_1}} + \abs{\interval{x}{m}{X_0}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_1}} + \abs{\interval{m}{y}{X_0}} < n$ follows analogously.
 
 \case Otherwise, if $\intcount{1} = 1$, then $\intcount{0} > 1$, thus $\abs{\interval{x}{m}{X_0}} < \intcount{0}$, and $\abs{\interval{x}{m}{X_1}} \leq \intcount{1}$, thus $\abs{\interval{x}{m}{X_0}} + \abs{\interval{x}{m}{X_1}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_0}} + \abs{\interval{m}{y}{X_1}} < n$ follows analogously.
-\end{caselist} 
+\end{caselist}
 
-\section{Complexity Analysis}
-\label{set-reconciliation-simple-complexity}
-
-
-
+This concludes the proof. Note that when $\mathcal{X}_i$ splits an interval $\interval{x}{y}{X_i}$ into $\interval{x}{m}{X_i}$ and $\interval{m}{y}{X_i}$, then $m$ has to be from $X_i$ (as opposed to $U \setminus X_i$) so that \cref{two-singletons-1} can be reduced to \cref{x1-empty}, and \cref{two-singletons-2} to \cref{two-singletons-1}. The induction step however still works if $m$ is chosen from $U$, so the restriction can be lifted for intervals that contain at least two items. This can become relevant if some items from $U$ can be encoded more efficiently than others.
 
 \section{Optimizations}
 \label{set-reconciliation-simple-optimizations}
 
+We now give a couple of optimizations over the simple protocol.
 
+\subsection{Encodings}
 
+A first, simple optimization is to encode empty intervals not via $\neutraladd$, but as a dedicated message part. This allows a more compact representation, which is appropriate since $\neutraladd$ should by far be the most frequently occurring fingerprint. We will designate an \defined{empty interval fingerprint} as $\ifpempty{x}{y}$.
 
+A second optimization that merely changes the encoding of messages consists of a more compact representation of ``adjacent'' intervals: Interval boundaries $[x_0, x_1), [x_1, x_2), \ldots, [x_{k - 1}, x_k)$ can be encoded as a simple list $x_0, x_1, \ldots, x_{k - 1}, x_k$. As long as the protocol only talks about intervals which partition the original interval, expressing $k$ interval boundaries only consumes $1 + k$ space as opposed to the naïve $2k$.
+
+We can in fact do even better: when a node receives some interval $[x, y)$ and splits it into $[x, m)$ and $[m, y)$, it merely needs to send $m$ to the other node. If the other node can reconstruct which interval is being split at point $m$, then all the necessary information has been conveyed. Since any $m$ falls into exactly one previously used interval, there can be no ambiguity. It thus suffices to send triples $( \mathit{fingerprint}_{\prec m}, m, \mathit{fingerprint}_{\succeq m})$. As a consequence, any particular $u \in U$ is transmitted at most one time during a protocol run. This optimization does however come at the cost of nodes needing to store interval boundaries across communication rounds.
+
+\subsection{Utilizing Interval Boundaries}
+\label{utilizing-boundaries}
+
+The next two optimizations stem from the fact that roughly half of all intervals include their lower boundary. When a node receives an interval fingerprint starting at some $x \in U$ and knows that the other node holds that $x$, it can simply add $x$ to its own set and $x$ can be excluded from any further reconciliation effort.
+
+An optimization that can be applied independent of $U$ and $\preceq$ is to introduce \defined{lower singleton intervals}, ranging from $x$ to $y$ and containing no item but $x$, denoted as $\ifpsingle{x}{y}$. When $\mathcal{X}_i$ receives a lower singleton interval $\ifpsingle{x}{y}$, it can reply with all items $u$ such that $x \prec u \prec y$. If $x \notin X_i$, it adds it to the set, otherwise no further action is necessary. This optimization shaves off one communication round in \cref{two-singletons} because $\mathcal{X}_1$ responds with $\ifpsingle{u1}{y}$ rather than $\ifpmanual{u_1}{y}{\fp{u_1}}$, thus finishing reconciliation in at most one more communication round.
+
+In order to efficiently leverage the knowledge that some interval of size at least two contains its lower boundary, $\preceq$ must be antidense:
+
+\begin{definition}
+Let $U$ be a set and $\preceq$ be a linear order on $u$. We call $\preceq$ \defined{antidense} if for all $x \in U$, if there exists $y \in U$ such that $x \prec y$, then there exists a least such element, denoted as $\successor{x}$.
+\end{definition}
+
+If $\preceq$ is antidense, we can introduce \defined{least-containing intervals}, ranging from $x$ to $y$ and guaranteed to contain $x$ and some other items whose fingerprint is $f$, denoted $\ifpcontain{x}{y}{f}$ (this is just a notation, $\fp{x}$ does not have to be transmitted). A node receiving a least-containing interval $\ifpcontain{x}{y}{f}$ reacts as if it received the item $x$ and the regular interval fingerprint $\ifpmanual{\successor{x}}{y}{f}$. Furthermore, whenever $\mathcal{X}_i$ sends a regular interval fingerprint $\ifp{x}{y}{X_i}$ and then receives a regular interval fingerprint $\ifp{x}{m}{X_j}$, neither node has item $x$, so $\mathcal{X}_i$ can act as if it received $\ifp{\successor{x}}{y}{X_j}$ instead.
+In both of these cases, if $\successor{x}$ is not defined, i.e. $x$ is the maximal element of the order, the notes merely act as if they just reconciled $x$ and do not perform any further work.
+
+This approach explicitly adds a single bit of information to each interval, namely whether the lower boundary is contained or not. A different approach is to implicitly distinguish between intervals that definitely contain the lower boundary, i.e. the greater of the two intervals obtained after a split, and intervals that may or may not contain their lower boundary, i.e. all other intervals. In this setting, sending and receiving a regular interval with the same lower boundary does not imply that the other node does not hold that item.
+
+Utilizing this information can even be done for universes with a non-antidense order, by introducing intervals which exclude both their boundaries: $\intervalx{x}{y}{A} \defeq \{a \in A | x \prec a \prec y\}$. When a node receives an interval $\interval{m}{y}{X_i}$ which is a greater interval obtained from a split, it reacts as if it received the item $x$ and the fingerprint over the interval $\ifpmanual{m}{y}{\intervalx{m}{y}{X_i}}$.
+
+\subsection{Branching Degree}
+
+For the correctness of the protocol, large, populated intervals need to be partitioned and then recursively reconciled. It does however neither matter to partition the intervals into exactly two subintervals, nor that the intervals are evenly partitioned in the middle. Increasing the number of subintervals per recursion step reduces the total number of roundtrips at the cost of less efficient bandwidth usage, as will be seen in the complexity analysis in \cref{set-reconciliation-complexity}.
+
+Splitting intervals into partitions of unequal sizes can be beneficial if missing items are not expected to be distributed uniformly at random across the whole order. Items might for example be ordered by the time at which they were created, a long-running node would then expect a continuous stream of new items, but would rarely receive an unknown item from the far past. Interval selection could reflect this by e.g. partitioning the $\frac{1}{2}$ oldest items into the first subinterval, then the next $\frac{1}{4}$ into the second subinterval, the next $\frac{1}{8}$ into the third, and so on. If unknown old items are rare enough, the average size of intervals which require recursion is less than under a split into intervals of equal sizes.
+
+\subsection{Bounded Boundaries}
+
+The boundaries of intervals come from the universe $U$ and need to be transmitted. If $U$ contains arbitrarily large elements, e.g. $U \defeq \{0, 1\}^{\ast}$, the protocol cannot uphold any reasonable complexity guarantees. The solution is to employ indirection, for example by hashing the items from $U$ and then comparing the hashes lexicographically rather than using any order on $U$. After the protocol has terminated, each node holds the hashes of the items it is missing.
+
+As a last phase, the nodes can then exchange those lists of hashes and answer with the items thus requested by the other node. Alternatively, the items could be retrieved from some content-addressable storage substrate. Both of these solutions add additional roundtrips to the reconciliation. A more efficient solution is to make the protocol aware of the difference between the hashes being used for interval delimiting and the actual items of interest. Whenever the protocol determines that an item needs to be transmitted, the node transmits the actual item rather than the hash.
+
+If the protocol is made aware of the difference and inlines items, most of the optimizations from \cref{utilizing-boundaries} become inapplicable, since knowing that the other node holds an item hashing to some lower boundary of an interval is not the same as obtaining that item. The only optimization in the same spirit that can be applied as the following: if a node $\mathcal{X}_i$ receives an interval fingerprint $\ifpmanual{m}{y}{\fp{m}}$, it can act as if it received an interval containing only $m$ and it additionally sends all items in $\intervalx{m}{y}{X_i}$.
+
+The interval boundaries do not necessarily have to be only the hashes of the items, additional information can be added so that the order on the boundaries exhibit similarity with some order on the items. Hashing has to be involved though in order to map the infinite universe to a finite set of boundaries with a low probability of collisions.
+
+\section{Recursive Set Reconciliation}
+\label{set-reconciliation-def}
+
+\section{Complexity Analysis}
+\label{set-reconciliation-complexity}
+
+TODO: I am looking forward to writing this section about as much as you are probably looking forward to reading it. 
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-simple-graphs}
