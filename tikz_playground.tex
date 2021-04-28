@@ -1,0 +1,556 @@
+% !TeX spellcheck = en_GB
+
+\documentclass[11pt]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage[UKenglish]{babel}
+
+%\usepackage[paper=a4paper,margin=1in]{geometry}
+\usepackage{amssymb}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+ %\usepackage{MnSymbol}
+ \usepackage{xcolor}
+ \usepackage{xstring}
+
+ \usepackage[hyphens]{url}
+ %\usepackage{amsthm}
+ %\usepackage{thm-restate}
+ \usepackage{hyperref}
+\usepackage{cleveref}
+% \usepackage{macros}
+ \usepackage{tikz}
+ \usepackage{bbding}
+
+
+ \usepackage[inline]{enumitem}
+% \usepackage{titling}
+ \usepackage{xspace}
+ \usepackage{dsfont}
+ \usepackage{stmaryrd}
+
+ \usepackage{xspace}
+ \usepackage{graphicx}
+ \usepackage[colorinlistoftodos]{todonotes}
+ \usepackage[inline]{enumitem}
+ \usepackage{multicol}
+ \setlength{\multicolsep}{0.0pt}% 50% of original values
+ \usepackage{xcolor}
+
+\usetikzlibrary{shapes.geometric,hobby,calc,arrows} % für ellipse
+\usetikzlibrary{decorations.pathmorphing}
+\usetikzlibrary{decorations.text}
+\usetikzlibrary{shapes.misc}
+\usetikzlibrary{decorations,shapes,snakes}
+
+\usepackage{macros}
+
+\tikzstyle{vertex} = []
+\tikzstyle{vertexPath} = [draw=none,opacity=0.0,fill=black,text opacity=1, align=center]
+
+\begin{document}
+
+\newcommand{\examplefp}[1]{#1}
+\newcommand{\fpa}[0]{\examplefp{144}}
+\newcommand{\fpb}[0]{\examplefp{194}}
+\newcommand{\fpc}[0]{\examplefp{240}}
+\newcommand{\fpd}[0]{\examplefp{245}}
+\newcommand{\fpe}[0]{\examplefp{76}}
+\newcommand{\fpf}[0]{\examplefp{221}}
+\newcommand{\fpg}[0]{\examplefp{224}}
+\newcommand{\fph}[0]{\examplefp{65}}
+\newcommand{\fpcd}[0]{\examplefp{229}}
+\newcommand{\fpacd}[0]{\examplefp{117}}
+\newcommand{\fpefgh}[0]{\examplefp{74}}
+\newcommand{\fpbcdh}[0]{\examplefp{232}}
+\newcommand{\fpzero}[0]{\examplefp{0}}
+
+%\newcommand{\examplea}[0]{ant}
+%\newcommand{\exampleb}[0]{boa}
+%\newcommand{\examplec}[0]{cat}
+%\newcommand{\exampled}[0]{dog}
+%\newcommand{\examplee}[0]{eel}
+%\newcommand{\examplef}[0]{fox}
+%\newcommand{\exampleg}[0]{gnu}
+%\newcommand{\exampleh}[0]{hen}
+%\newcommand{\examplei}[0]{i}
+
+\newcommand{\examplea}[0]{a}
+\newcommand{\exampleb}[0]{b}
+\newcommand{\examplec}[0]{c}
+\newcommand{\exampled}[0]{d}
+\newcommand{\examplee}[0]{e}
+\newcommand{\examplef}[0]{f}
+\newcommand{\exampleg}[0]{g}
+\newcommand{\exampleh}[0]{h}
+\newcommand{\examplei}[0]{i}
+
+\newcommand{\examplefpi}[5]{
+\begin{minipage}{3.5cm}
+  $\ifpmanual{#2}{#3}{\fp{\interval{#2}{#3}{X_{#1}}}} = \linebreak \ifpmanual{#2}{#3}{\fp{#5}} = \linebreak \ifpmanual{#2}{#3}{#4}$
+\end{minipage}
+}
+\newcommand{\exampleitems}[1]{$#1$}
+
+%\examplefpi{0}{6}{\examplea}{\examplei}{\fpbcdh}
+%
+%\examplefpi{1}{3}{\examplea}{\exemplae}{\fpacd}
+%\examplefpi{1}{9}{\examplee}{\examplei}{\fpefgh}
+%
+%\examplefpi{2}{1}{\examplea}{\examplec}{\fpb}
+%\examplefpi{2}{4}{\examplec}{\examplede}{\fpcd}
+%\examplefpi{2}{7}{\examplee}{\exampleh}{\fpzero}
+%\examplefpi{2}{10}{\exampleh}{\examplei}{\fph}
+%
+%\examplefpi{3}{0}{\examplea}{\examplea}{\fpzero}
+%\examplefpi{3}{2}{\examplea}{\examplec}{\fpa}
+%\exampledone{3}{4}
+%\exampleitems{3}{7}{\examplee, \examplef, \exampleg}
+%\exampledone{3}{10}
+%
+%\exampleitems{4}{0}{}
+%\examplefpi{4}{1}{\examplea}{\exampleb}{\fpzero}
+%\examplefpi{4}{3}{\exampleb}{\examplec}{\fpb}
+%
+%\exampleitems{5}{1}{\examplea}
+%\examplefpi{5}{3}{\exampleb}{\examplec}{\fpzero}
+%
+%\exampleitems{6}{3}{\exampleb}
+
+\tikzset{
+fpi/.style={
+  %draw=none,
+  %inner sep=0pt,
+  %text width=100pt,
+  %minimum size=36pt,
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzstyle{edge} = [draw,thick,opacity=0.25]
+
+\begin{tikzpicture}[xscale=1.35,yscale=3.0]
+	%\useasboundingbox (0,0) rectangle (17,5);
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (v60) at (6,-0) [fpi] {\examplefpi{0}{\examplea}{\examplei}{\fpbcdh}{\{\exampleb, \examplec, \exampled, \exampleh\}}};
+
+                \node (v31) at (3,-1) [fpi] {\examplefpi{1}{\examplea}{\examplee}{\fpacd}{\{\examplea, \examplec, \exampled\}}};
+                \node (v91) at (9,-1) [fpi] {\examplefpi{1}{\examplee}{\examplei}{\fpefgh}{\{\examplee, \examplef, \exampleg, \exampleh\}}};
+
+                \node (v12) at (1,-2) [fpi] {\examplefpi{0}{\examplea}{\examplec}{\fpb}{\{\exampleb\}}};
+                \node (v42) at (4,-2) [fpi] {\examplefpi{0}{\examplec}{\examplee}{\fpcd}{\{\examplec, \exampled\}}};
+                \node (v72) at (7,-2) [fpi] {\examplefpi{0}{\examplee}{\exampleh}{\fpzero}{\emptyset}};
+                \node (v102) at (10,-2) [fpi] {\examplefpi{0}{\exampleh}{\examplei}{\fph}{\{\exampleh\}}};
+
+                \node (v03) at (0,-3) [fpi] {\examplefpi{1}{\examplea}{\examplea}{\fpzero}{\emptyset}};
+                \node (v23) at (4,-3) [fpi] {\examplefpi{1}{\examplea}{\examplec}{\fpa}{\{\examplea\}}};
+                \node (v73) at (7,-3) {\exampleitems{\{\examplee, \examplef, \exampleg\}}};
+
+                \node (v04) at (0,-4) {\exampleitems{\emptyset}};
+                \node (v14) at (2,-4) [fpi] {\examplefpi{0}{\examplea}{\exampleb}{\fpzero}{\emptyset}};
+                \node (v34) at (6,-4) [fpi] {\examplefpi{0}{\exampleb}{\examplec}{\fpb}{\{\exampleb\}}};
+
+                \node (v15) at (2,-5) {\exampleitems{\{\examplea\}}};
+                \node (v35) at (6,-5) [fpi] {\examplefpi{1}{\exampleb}{\examplec}{\fpzero}{\emptyset}};
+
+                \node (v36) at (6,-6) {\exampleitems{\{\exampleb\}}};
+		%edges
+		\draw (v60) edge[edge] (v31);
+		\draw (v60) edge[edge] (v91);
+
+		\draw (v31) edge[edge] (v12);
+		\draw (v31) edge[edge] (v42);
+		\draw (v91) edge[edge] (v72);
+		\draw (v91) edge[edge] (v102);
+		
+		\draw (v12) edge[edge] (v03);
+		\draw (v12) edge[edge] (v23);
+		\draw (v72) edge[edge] (v73);
+
+		\draw (v03) edge[edge] (v04);
+		\draw (v23) edge[edge] (v14);
+		\draw (v23) edge[edge] (v34);
+
+		\draw (v14) edge[edge] (v15);
+		\draw (v34) edge[edge] (v35);
+
+                \draw (v35) edge[edge] (v36);
+	\end{pgfonlayer}
+	
+	\begin{pgfonlayer}{background}
+		
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+
+
+
+
+%\begin{tikzpicture}
+%\tikzstyle{vertex} = [opacity=0.7]
+%\tikzstyle{edge} = [draw,thick,->,-latex,opacity=0.3]
+%\tikzstyle{edgePath} = [draw,thick,->,-latex,opacity=1]
+%
+%	\pgfdeclarelayer{background}
+%	\pgfdeclarelayer{foreground}
+%	\pgfsetlayers{background,main,foreground}
+%	
+%	\begin{pgfonlayer}{foreground}
+%		%vertices
+%		\node[vertex] (v1) at (1,1) {$1$};
+%		\node[vertex] (v2) at (2,1) {$2$};
+%		\node[vertex] (v3) at (2,2) {$3$};
+%		\node[vertex] (v4) at (3,1) {$4$};
+%		\node[vertex] (v5) at (4,1) {$5$};
+%		\node[vertex] (v6) at (4,2) {$6$};
+%		\node[vertex] (v7) at (4,3) {$7$};
+%		\node[vertex] (v8) at (5,1) {$8$};
+%		\node[vertex] (v9) at (6,1) {$9$};
+%		\node[vertex] (v10) at (6,2) {$10$};
+%		\node[vertex] (v11) at (7,1) {$11$};
+%		\node[vertex] (v12) at (8,1) {$12$};
+%		\node[vertex] (v13) at (8,2) {$13$};
+%		\node[vertex] (v14) at (8,3) {$14$};
+%		\node[vertex] (v15) at (8,4) {$15$};
+%		\node[vertex] (v16) at (9,1) {$16$};
+%		\node[vertex] (v17) at (10,1) {$17$};
+%		\node[vertex] (v18) at (10,2) {$\mathbf{18}$};
+%		\node[vertex] (v19) at (11,1) {$19$};
+%		\node[vertex] (v20) at (12,1) {$20$};
+%		\node[vertex] (v21) at (12,2) {$\mathbf{21}$};
+%		\node[vertex] (v22) at (12,3) {$\mathbf{22}$};
+%		\node[vertex] (v23) at (13,1) {$\mathbf{23}$};
+%		\node[vertex] (v24) at (14,1) {$\mathbf{24}$};
+%		\node[vertex] (v25) at (14,2) {$25$};
+%		\node[vertex] (v26) at (15,1) {$26$};
+%		\node[vertex] (v27) at (16,1) {$27$};
+%		\node[vertex] (v28) at (16,2) {$28$};
+%		\node[vertex] (v29) at (16,3) {$29$};
+%		\node[vertex] (v30) at (16,4) {$30$};
+%		\node[vertex] (v31) at (16,5) {$31$};
+%		\node[vertex] (v32) at (17,1) {$32$};
+%		\node[vertex] (v33) at (18,1) {$33$};
+%		\node[vertex] (v34) at (18,2) {$34$};
+%		\node[vertex] (v35) at (19,1) {$35$};
+%		\node[vertex] (v36) at (20,1) {$36$};
+%		\node[vertex] (v37) at (20,2) {$37$};
+%		\node[vertex] (v38) at (20,3) {$38$};
+%		\node[vertex] (v46) at (24,4) {$46$};
+%		\node[vertex] (v63) at (32,5) {$63$};
+%		\node[vertex] (v64) at (32,6) {$64$};
+%		%edges
+%		\draw (v2) edge[edge] (v1);
+%		\draw (v3) edge[edge] (v1);
+%		\draw (v4) edge[edge] (v3);
+%		\draw (v5) edge[edge] (v4);
+%		\draw (v6) edge[edge] (v3);
+%		\draw (v7) edge[edge] (v3);
+%		\draw (v8) edge[edge] (v7);
+%		\draw (v9) edge[edge] (v8);
+%		\draw (v10) edge[edge] (v7);
+%		\draw (v11) edge[edge] (v10);
+%		\draw (v12) edge[edge] (v11);
+%		\draw (v13) edge[edge] (v10);
+%		\draw (v14) edge[edge] (v7);
+%		\draw (v15.185) edge[edge] (v7.25);
+%		\draw (v16) edge[edge] (v15);
+%		\draw (v17) edge[edge] (v16);
+%		\draw (v18) edge[edge] (v15);
+%		\draw (v19) edge[edge] (v18);
+%		\draw (v20) edge[edge] (v19);
+%		\draw (v21) edge[edgePath] (v18);
+%		\draw (v22) edge[edge] (v15.340);
+%		\draw (v23) edge[edgePath] (v22);
+%		\draw (v24) edge[edgePath] (v23);
+%		\draw (v25) edge[edge] (v22);
+%		\draw (v26) edge[edge] (v25);
+%		\draw (v27) edge[edge] (v26);
+%		\draw (v28) edge[edge] (v25);
+%		\draw (v29) edge[edge] (v22);
+%		\draw (v30) edge[edge] (v15);
+%		\draw (v31.185) edge[edge] (v15.25);
+%		\draw (v32) edge[edge] (v31);
+%		\draw (v33) edge[edge] (v32);
+%		\draw (v34) edge[edge] (v31);
+%		\draw (v35) edge[edge] (v34);
+%		\draw (v36) edge[edge] (v35);
+%		\draw (v37) edge[edge] (v34);
+%		\draw (v38) edge[edge] (v31.320);
+%		\draw (v46.175) edge[edge] (v31.335);
+%		\draw (v63) edge[edge] (v31);
+%		\draw (v64) edge[edge] (v31.30);
+%		
+%		%trivial edges
+%		\newcommand{\prededge}[2]{\draw (#1) edge[edge] (#2)};
+%		\foreach \x in {31,30,29,28,25,21,18,15,14,13,10,7,6,3}
+%		{
+%			\pgfmathtruncatemacro\y{\x-1}
+%			\prededge{v\x}{v\y};
+%		}
+%		\draw (v22) edge[edgePath] (v21);
+%	\end{pgfonlayer}
+%	
+%	\begin{pgfonlayer}{background}
+%		\newcommand{\onerecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.35,0.25)$) rectangle ($({#1},1)+(0.35,0.25)$);}
+%
+%		\foreach \x in {1,...,20}		
+%		{
+%			\onerecs{\x};
+%		}
+%
+%		\newcommand{\tworecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.4,0.3)$) rectangle ($({#1+1},2)+(0.4,0.3)$);}
+%		
+%		\foreach \x in {1,...,10}		
+%		{
+%			\tworecs{2*\x-1};
+%		}
+%		
+%		\newcommand{\fourrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.44,0.4)$) rectangle ($({#1+3},3)+(0.44,0.4)$);}
+%		
+%		\foreach \x in {1,...,5}		
+%		{
+%			\fourrecs{4*\x-3};
+%		}
+%		
+%		\newcommand{\eightrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.48,0.45)$) rectangle ($({#1+7},4)+(0.48,0.45)$);}
+%		
+%		\foreach \x in {1,...,3}		
+%		{
+%			\eightrecs{8*\x-7};
+%		}
+%
+%		\newcommand{\sixteenrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.03] ($(#1,1)-(0.499,0.499)$) rectangle ($({#1+15},5)+(0.499,0.499)$);}
+%		
+%		\foreach \x in {1,2}		
+%		{
+%			\sixteenrecs{16*\x-15};
+%		}
+%
+%		\draw[draw=none,rounded corners,fill=black,opacity=0.02] ($(1,1)-(0.52,0.5)$) rectangle ($(32,6)+(0.52,0.5)$);
+%	\end{pgfonlayer}
+%	
+%	\begin{pgfonlayer}{main}		
+%		%certificate 18
+%		\begin{scope}[transparency group, opacity=0.3]
+%			\draw[myOrange,line width=14pt,rounded corners=0.1em,line cap=round] (v31.center) -- (v30.center) -- (v29.center) -- (v22.center) -- (v21.center) -- (v18.center) -- (v15.center) -- (v7.center) -- (v3.center) -- (v1.center); 
+%			\draw[myOrange,line width=14pt,rounded corners=1em,line cap=round] (v31.center) -- (v30.center) -- (v29.center) -- (v22.center) -- (v21.center) -- (v18.center) -- (v15.center) -- (v7.center) -- (v3.center) -- (v1.center);
+%		\end{scope}
+%
+%		%certificate 18 path fragment
+%		\begin{scope}[transparency group, opacity=0.6]
+%			\draw[myOrange,line width=14pt,rounded corners=0.1em,line cap=round](v22.center) -- (v21.center) -- (v18.center); 
+%			\draw[myOrange,line width=14pt,rounded corners=1em,line cap=round](v22.center) -- (v21.center) -- (v18.center);
+%		\end{scope}
+%
+%		%certificate 24
+%		\begin{scope}[transparency group, opacity=0.3]
+%			\draw[myBlue,line width=14pt,rounded corners=0.1em,line cap=round] (v31.center) -- (v30.center) -- (v29.center) -- (v28.center) -- (v25.center) -- (v24.center) -- (v23.center) -- (v22.center) -- (v15.center) -- (v7.center) -- (v3.center) -- (v1.center); 
+%			\draw[myBlue,line width=14pt,rounded corners=1em,line cap=round] (v31.center) -- (v30.center) -- (v29.center) -- (v28.center) -- (v25.center) -- (v24.center) -- (v23.center) -- (v22.center) -- (v15.center) -- (v7.center) -- (v3.center) -- (v1.center); 
+%		\end{scope}
+%
+%		%certificate 24 path fragment
+%		\begin{scope}[transparency group, opacity=0.6]
+%			\draw[myBlue,line width=14pt,rounded corners=0.1em,line cap=round] (v24.center) -- (v23.center) -- (v22.center); 
+%			\draw[myBlue,line width=14pt,rounded corners=1em,line cap=round]  (v24.center) -- (v23.center) -- (v22.center); 
+%		\end{scope}
+%	\end{pgfonlayer}
+%\end{tikzpicture}
+%
+%
+%
+%
+%
+%
+%\begin{tikzpicture}
+%\tikzstyle{vertex} = [opacity=0.7]
+%\tikzstyle{edge} = [draw,thick,->,-latex,opacity=0.3]
+%\tikzstyle{edgePath} = [draw,thick,->,-latex,opacity=1]
+%
+%	\pgfdeclarelayer{background}
+%	\pgfdeclarelayer{foreground}
+%	\pgfsetlayers{background,main,foreground}
+%	
+%	\begin{pgfonlayer}{foreground}
+%		%vertices
+%		\node[vertex] (v1) at (1,1) {$1$};
+%		\node[vertex] (v2) at (2,1) {$2$};
+%		\node[vertex] (v3) at (2,2) {$3$};
+%		\node[vertex] (v4) at (3,1) {$4$};
+%		\node[vertex] (v5) at (4,1) {$5$};
+%		\node[vertex] (v6) at (4,2) {$6$};
+%		\node[vertex] (v7) at (4,3) {$7$};
+%		\node[vertex] (v8) at (5,1) {$8$};
+%		\node[vertex] (v9) at (6,1) {$9$};
+%		\node[vertex] (v10) at (6,2) {$10$};
+%		\node[vertex] (v11) at (7,1) {$11$};
+%		\node[vertex] (v12) at (8,1) {$12$};
+%		\node[vertex] (v13) at (8,2) {$13$};
+%		\node[vertex] (v14) at (8,3) {$14$};
+%		\node[vertex] (v15) at (8,4) {$15$};
+%		\node[vertex] (v16) at (9,1) {$16$};
+%		\node[vertex] (v17) at (10,1) {$17$};
+%		\node[vertex] (v18) at (10,2) {$\mathbf{18}$};
+%		\node[vertex] (v19) at (11,1) {$19$};
+%		\node[vertex] (v20) at (12,1) {$20$};
+%		\node[vertex] (v21) at (12,2) {$\mathbf{21}$};
+%		\node[vertex] (v22) at (12,3) {$\mathbf{22}$};
+%		\node[vertex] (v23) at (13,1) {$\mathbf{23}$};
+%		\node[vertex] (v24) at (14,1) {$\mathbf{24}$};
+%		\node[vertex] (v25) at (14,2) {$25$};
+%		\node[vertex] (v26) at (15,1) {$26$};
+%		\node[vertex] (v27) at (16,1) {$27$};
+%		\node[vertex] (v28) at (16,2) {$28$};
+%		\node[vertex] (v29) at (16,3) {$29$};
+%		\node[vertex] (v30) at (16,4) {$30$};
+%		\node[vertex] (v31) at (16,5) {$31$};
+%		\node[vertex] (v32) at (17,1) {$32$};
+%		\node[vertex] (v33) at (18,1) {$33$};
+%		\node[vertex] (v34) at (18,2) {$34$};
+%		\node[vertex] (v35) at (19,1) {$35$};
+%		\node[vertex] (v36) at (20,1) {$36$};
+%		\node[vertex] (v37) at (20,2) {$37$};
+%		\node[vertex] (v38) at (20,3) {$38$};
+%		\node[vertex] (v46) at (24,4) {$46$};
+%		\node[vertex] (v63) at (32,5) {$63$};
+%		\node[vertex] (v64) at (32,6) {$64$};
+%		%edges
+%		\draw (v2) edge[edge] (v1);
+%		\draw (v3) edge[edge] (v1);
+%		\draw (v4) edge[edge] (v3);
+%		\draw (v5) edge[edge] (v4);
+%		\draw (v6) edge[edge] (v3);
+%		\draw (v7) edge[edge] (v3);
+%		\draw (v8) edge[edge] (v7);
+%		\draw (v9) edge[edge] (v8);
+%		\draw (v10) edge[edge] (v7);
+%		\draw (v11) edge[edge] (v10);
+%		\draw (v12) edge[edge] (v11);
+%		\draw (v13) edge[edge] (v10);
+%		\draw (v14) edge[edge] (v7);
+%		\draw (v15.185) edge[edge] (v7.25);
+%		\draw (v16) edge[edge] (v15);
+%		\draw (v17) edge[edge] (v16);
+%		\draw (v18) edge[edge] (v15);
+%		\draw (v19) edge[edge] (v18);
+%		\draw (v20) edge[edge] (v19);
+%		\draw (v21) edge[edgePath] (v18);
+%		\draw (v22) edge[edge] (v15.340);
+%		\draw (v23) edge[edgePath] (v22);
+%		\draw (v24) edge[edgePath] (v23);
+%		\draw (v25) edge[edge] (v22);
+%		\draw (v26) edge[edge] (v25);
+%		\draw (v27) edge[edge] (v26);
+%		\draw (v28) edge[edge] (v25);
+%		\draw (v29) edge[edge] (v22);
+%		\draw (v30) edge[edge] (v15);
+%		\draw (v31.185) edge[edge] (v15.25);
+%		\draw (v32) edge[edge] (v31);
+%		\draw (v33) edge[edge] (v32);
+%		\draw (v34) edge[edge] (v31);
+%		\draw (v35) edge[edge] (v34);
+%		\draw (v36) edge[edge] (v35);
+%		\draw (v37) edge[edge] (v34);
+%		\draw (v38) edge[edge] (v31.320);
+%		\draw (v46.175) edge[edge] (v31.335);
+%		\draw (v63) edge[edge] (v31);
+%		\draw (v64) edge[edge] (v31.30);
+%		
+%		%trivial edges
+%		\newcommand{\prededge}[2]{\draw (#1) edge[edge] (#2)};
+%		\foreach \x in {31,30,29,28,25,21,18,15,14,13,10,7,6,3}
+%		{
+%			\pgfmathtruncatemacro\y{\x-1}
+%			\prededge{v\x}{v\y};
+%		}
+%		\draw (v22) edge[edgePath] (v21);
+%	\end{pgfonlayer}
+%	
+%	\begin{pgfonlayer}{background}
+%		\newcommand{\onerecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.35,0.25)$) rectangle ($({#1},1)+(0.35,0.25)$);}
+%
+%		\foreach \x in {1,...,20}		
+%		{
+%			\onerecs{\x};
+%		}
+%
+%		\newcommand{\tworecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.4,0.3)$) rectangle ($({#1+1},2)+(0.4,0.3)$);}
+%		
+%		\foreach \x in {1,...,10}		
+%		{
+%			\tworecs{2*\x-1};
+%		}
+%		
+%		\newcommand{\fourrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.44,0.4)$) rectangle ($({#1+3},3)+(0.44,0.4)$);}
+%		
+%		\foreach \x in {1,...,5}		
+%		{
+%			\fourrecs{4*\x-3};
+%		}
+%		
+%		\newcommand{\eightrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.06] ($(#1,1)-(0.48,0.45)$) rectangle ($({#1+7},4)+(0.48,0.45)$);}
+%		
+%		\foreach \x in {1,...,3}		
+%		{
+%			\eightrecs{8*\x-7};
+%		}
+%
+%		\newcommand{\sixteenrecs}[1]{\draw[draw=none,rounded corners,fill=black,opacity=0.03] ($(#1,1)-(0.499,0.499)$) rectangle ($({#1+15},5)+(0.499,0.499)$);}
+%		
+%		\foreach \x in {1,2}		
+%		{
+%			\sixteenrecs{16*\x-15};
+%		}
+%
+%		\draw[draw=none,rounded corners,fill=black,opacity=0.02] ($(1,1)-(0.52,0.5)$) rectangle ($(32,6)+(0.52,0.5)$);
+%	\end{pgfonlayer}
+%	
+%	\begin{pgfonlayer}{main}		
+%		\begin{scope}[transparency group, opacity=0.3]
+%			\draw[myOrange,line width=14pt,rounded corners=0.1em,line cap=round] (v31.center) -- (v30.center); 
+%			\draw[myOrange,line width=14pt,rounded corners=1em,line cap=round] (v31.center) -- (v30.center);
+%		\end{scope}
+%
+%		\begin{scope}[transparency group, opacity=0.6]
+%			\draw[myOrange!75!myRed,line width=14pt,rounded corners=0.1em,line cap=round] (v29.center) -- (v22.center) -- (v21.center) -- (v18.center); 
+%			\draw[myOrange!75!myRed,line width=14pt,rounded corners=1em,line cap=round] (v29.center) -- (v22.center) -- (v21.center) -- (v18.center);
+%		\end{scope}
+%		
+%		\begin{scope}[transparency group, opacity=0.85]
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=0.1em,line cap=round] (v17.center) -- (v16.center) -- (v15.center); 
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=1em,line cap=round] (v17.center) -- (v16.center) -- (v15.center);
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=0.1em,line cap=round] (v15.center) -- (v14.center) -- (v13.center) -- (v12.center) -- (v11.center) -- (v10.center); 
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=1em,line cap=round] (v15.center) -- (v14.center) -- (v13.center) -- (v12.center) -- (v11.center) -- (v10.center);
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=0.1em,line cap=round] (v10.center) -- (v9.center); 
+%			\draw[myOrange!50!myRed,line width=14pt,rounded corners=1em,line cap=round] (v10.center) -- (v9.center);
+%		\end{scope}
+%
+%		\begin{scope}[transparency group, opacity=0.6]
+%			\draw[myOrange!75!myRed,line width=14pt,rounded corners=0.1em,line cap=round] (v8.center) -- (v7.center); 
+%			\draw[myOrange!75!myRed,line width=14pt,rounded corners=1em,line cap=round] (v8.center) -- (v7.center);
+%		\end{scope}
+%
+%		\begin{scope}[transparency group, opacity=0.3]
+%			\draw[myOrange,line width=14pt,rounded corners=0.1em,line cap=round] (v3.center) -- (v1.center); 
+%			\draw[myOrange,line width=14pt,rounded corners=1em,line cap=round] (v3.center) -- (v1.center);
+%		\end{scope}
+%	\end{pgfonlayer}
+%\end{tikzpicture}
+
+
+
+
+
+
+\end{document}

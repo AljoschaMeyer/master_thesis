@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
 
 In this chapter, we consider the set reconciliation protocol sketched in the introduction in greater detail.
-We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, and we prove its correctness in \cref{set-reconciliation-simple-correct}. \Cref{set-reconciliation-simple-optimizations} lists optimizations which eliminate unnecessary work from the protocol. We then define the proper set reconciliation protocol in \cref{set-reconciliation-def} and  do a complexity analysis in \cref{set-reconciliation-complexity}. We conclude with an example application in \cref{set-reconciliation-simple-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
+We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, and we prove its correctness in \cref{set-reconciliation-simple-correct}. \Cref{set-reconciliation-simple-optimizations} lists optimizations which eliminate unnecessary work from the protocol. We then define the proper set reconciliation protocol in \cref{set-reconciliation-def} and  do a complexity analysis in \cref{set-reconciliation-complexity}. We conclude the chapter with an example application in \cref{set-reconciliation-simple-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
 
 \section{Simple Recursive Set Reconciliation}
 \label{set-reconciliation-simple-def}
@@ -28,7 +28,118 @@ When a node $\mathcal{X}_i$ receives a message, it performs the following action
 
 To initiate reconciliation of an interval, a node sends a message consisting solely of its interval fingerprint of the interval to reconcile.
 
-TODO example figure
+\Cref{simple-set-reconciliation-example} gives an example run of the protocol.
+
+\begin{figure*}
+\newcommand{\examplefp}[1]{#1}
+\newcommand{\fpa}[0]{\examplefp{144}}
+\newcommand{\fpb}[0]{\examplefp{194}}
+\newcommand{\fpc}[0]{\examplefp{240}}
+\newcommand{\fpd}[0]{\examplefp{245}}
+\newcommand{\fpe}[0]{\examplefp{76}}
+\newcommand{\fpf}[0]{\examplefp{221}}
+\newcommand{\fpg}[0]{\examplefp{224}}
+\newcommand{\fph}[0]{\examplefp{65}}
+\newcommand{\fpcd}[0]{\examplefp{229}}
+\newcommand{\fpacd}[0]{\examplefp{117}}
+\newcommand{\fpefgh}[0]{\examplefp{74}}
+\newcommand{\fpbcdh}[0]{\examplefp{232}}
+\newcommand{\fpzero}[0]{\examplefp{0}}
+
+\newcommand{\examplea}[0]{a}
+\newcommand{\exampleb}[0]{b}
+\newcommand{\examplec}[0]{c}
+\newcommand{\exampled}[0]{d}
+\newcommand{\examplee}[0]{e}
+\newcommand{\examplef}[0]{f}
+\newcommand{\exampleg}[0]{g}
+\newcommand{\exampleh}[0]{h}
+\newcommand{\examplei}[0]{i}
+
+\newcommand{\examplefpi}[5]{
+\begin{minipage}{3.55cm}
+  $\ifpmanual{#2}{#3}{\fp{\interval{#2}{#3}{X_{#1}}}} = \linebreak \ifpmanual{#2}{#3}{\fp{#5}} = \linebreak \ifpmanual{#2}{#3}{#4}$
+\end{minipage}
+}
+\newcommand{\exampleitems}[1]{$#1$}
+
+\tikzset{
+fpi/.style={
+  %draw=none,
+  %inner sep=0pt,
+  %text width=100pt,
+  %minimum size=36pt,
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzstyle{edge} = [draw,thick,opacity=0.25]
+
+\begin{tikzpicture}[xscale=1.35,yscale=3.0]
+	%\useasboundingbox (0,0) rectangle (17,5);
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (v60) at (6,-0) [fpi] {\examplefpi{0}{\examplea}{\examplei}{\fpbcdh}{\{\exampleb, \examplec, \exampled, \exampleh\}}};
+
+                \node (v31) at (3,-1) [fpi] {\examplefpi{1}{\examplea}{\examplee}{\fpacd}{\{\examplea, \examplec, \exampled\}}};
+                \node (v91) at (9,-1) [fpi] {\examplefpi{1}{\examplee}{\examplei}{\fpefgh}{\{\examplee, \examplef, \exampleg, \exampleh\}}};
+
+                \node (v12) at (1,-2) [fpi] {\examplefpi{0}{\examplea}{\examplec}{\fpb}{\{\exampleb\}}};
+                \node (v42) at (4,-2) [fpi] {\examplefpi{0}{\examplec}{\examplee}{\fpcd}{\{\examplec, \exampled\}}};
+                \node (v72) at (7,-2) [fpi] {\examplefpi{0}{\examplee}{\exampleh}{\fpzero}{\emptyset}};
+                \node (v102) at (10,-2) [fpi] {\examplefpi{0}{\exampleh}{\examplei}{\fph}{\{\exampleh\}}};
+
+                \node (v03) at (0,-3) [fpi] {\examplefpi{1}{\examplea}{\examplea}{\fpzero}{\emptyset}};
+                \node (v23) at (4,-3) [fpi] {\examplefpi{1}{\examplea}{\examplec}{\fpa}{\{\examplea\}}};
+                \node (v73) at (7,-3) {\exampleitems{\{\examplee, \examplef, \exampleg\}}};
+
+                \node (v04) at (0,-4) {\exampleitems{\emptyset}};
+                \node (v14) at (2,-4) [fpi] {\examplefpi{0}{\examplea}{\exampleb}{\fpzero}{\emptyset}};
+                \node (v34) at (6,-4) [fpi] {\examplefpi{0}{\exampleb}{\examplec}{\fpb}{\{\exampleb\}}};
+
+                \node (v15) at (2,-5) {\exampleitems{\{\examplea\}}};
+                \node (v35) at (6,-5) [fpi] {\examplefpi{1}{\exampleb}{\examplec}{\fpzero}{\emptyset}};
+
+                \node (v36) at (6,-6) {\exampleitems{\{\exampleb\}}};
+		%edges
+		\draw (v60) edge[edge] (v31);
+		\draw (v60) edge[edge] (v91);
+
+		\draw (v31) edge[edge] (v12);
+		\draw (v31) edge[edge] (v42);
+		\draw (v91) edge[edge] (v72);
+		\draw (v91) edge[edge] (v102);
+		
+		\draw (v12) edge[edge] (v03);
+		\draw (v12) edge[edge] (v23);
+		\draw (v72) edge[edge] (v73);
+
+		\draw (v03) edge[edge] (v04);
+		\draw (v23) edge[edge] (v14);
+		\draw (v23) edge[edge] (v34);
+
+		\draw (v14) edge[edge] (v15);
+		\draw (v34) edge[edge] (v35);
+
+                \draw (v35) edge[edge] (v36);
+	\end{pgfonlayer}
+	
+	\begin{pgfonlayer}{background}
+		
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+\caption{TODO WIP, ignore for now}
+
+\label{simple-set-reconciliation-example}
+
+\end{figure*}
 
 \section{Proof of Correctness}
 \label{set-reconciliation-simple-correct}
@@ -114,6 +225,8 @@ Utilizing this information can even be done for universes with a non-antidense o
 \subsection{Branching Degree}
 
 For the correctness of the protocol, large, populated intervals need to be partitioned and then recursively reconciled. It does however neither matter to partition the intervals into exactly two subintervals, nor that the intervals are evenly partitioned in the middle. Increasing the number of subintervals per recursion step reduces the total number of roundtrips at the cost of less efficient bandwidth usage, as will be seen in the complexity analysis in \cref{set-reconciliation-complexity}.
+
+In a similar vein, there is no inherent reason to initiate reconciliation by only sending a single fingerprint for the whole interval of interest, the initiating node and just as well partition the interval of interest and send fingerprints for each subinterval.
 
 Splitting intervals into partitions of unequal sizes can be beneficial if missing items are not expected to be distributed uniformly at random across the whole order. Items might for example be ordered by the time at which they were created, a long-running node would then expect a continuous stream of new items, but would rarely receive an unknown item from the far past. Interval selection could reflect this by e.g. partitioning the $\frac{1}{2}$ oldest items into the first subinterval, then the next $\frac{1}{4}$ into the second subinterval, the next $\frac{1}{8}$ into the third, and so on. If unknown old items are rare enough, the average size of intervals which require recursion is less than under a split into intervals of equal sizes.
 

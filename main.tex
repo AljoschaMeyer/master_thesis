@@ -20,6 +20,8 @@
 
 \usepackage{macros}
 
+ \usepackage{tikz}
+
 \title{
 {Efficient Synchronization of Recursively Partitionable Data Structures}\\
 {\large Technische Universität Berlin}
@@ -41,30 +43,38 @@
 \label{fingerprints}
 \input{chapters/fingerprints}
 
-\chapter{Basic Set Reconciliation}
+\chapter{Set Reconciliation}
 \label{basic-set-reconciliation}
 \input{chapters/basic_set_reconciliation}
+
+\chapter{Bounded Memory Set Reconciliation}
+\label{bounded-set-reconciliation}
+\input{chapters/bounded_set_reconciliation}
+
+\chapter{Other Data Structures}
+\label{other-data-structures}
+\input{chapters/other_data_structures}
 
 \chapter{Related Work}
 \label{related-work}
 \input{chapters/related_work}
 
+\chapter{Conclusion}
+\label{conclusion}
+\input{chapters/conclusion}
 
-
-\chapter{Work Plan}
+\chapter*{Work Plan}
 
 \begin{itemize}
-\item 1 - 2 weeks: fingerprint chapter
-\item 1 week: set reconciliation chapter
-\item 2 weeks: bounded-memory set reconciliation chapter
-\item 2 weeks: synchronizing other data structures chapter
-\item 2 weeks: introduction, conclusion, abstract, coherence, polishing
-\item 4 - 8 weeks: slack, no matter how accurate those estimates, nobody keeps self-inflicted deadlines
+\item by 05.05: basic set reconciliation chapter
+\item by 26.05: fingerprint chapter
+\item by 16.06: bounded-memory set reconciliation chapter
+\item by 07.07: other data structures chapter
+\item by 28.07: conclusion, coherence, polishing
+\item 15.08: self-inflicted soft deadline, unless adding more content
 \end{itemize}
 
-Possibly a chapter discussing more specifics that would occur when plugging set reconciliation into a scuttlebutt-like architecture. Would highlight a context in which the complexity trade-offs are better suited than those of the related literature.
-
-Actual implementation work, benchmarking? Probably too time intensive, but who knows.
+Possibly a chapter discussing more specifics that would occur when using set reconciliation as the core of an unordered p2p pubsub mechanism.
 
 \bibliographystyle{alphaurl}
 \bibliography{main}

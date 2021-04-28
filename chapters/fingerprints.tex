@@ -3,9 +3,17 @@
 The protocols described in this thesis work by computing fingerprints of sets.
 This chapter defines and motivates a specific fingerprinting scheme that admits fast computation with small overhead for the storage and maintenance of auxiliary data structures.
 
-\section{Preliminary Definitions}
+\begin{itemize}
+  \item Merkle trees and why they don't cut it
+  \item hashing into a group and adding things, using search trees for efficient computation
+  \item why not monoids instead of groups
+  \item fingerprint collisions (with and without help from malicious peers)
+  \item miscellaneous (also nice for putting data structures into hash tables, intervals as primitive queries, progress over unreliable links)
+\end{itemize}
 
-TODO: move these to where they are needed
+%\section{Preliminary Definitions}
+
+TODO: move the following definitions to where they are needed
 
 \begin{definition}
 Let $U$ be a set and $\preceq$ a binary relation on $U$.

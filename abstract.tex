@@ -14,9 +14,9 @@ An efficient solution should avoid redundantly sending data to a node which alre
 
 We give conceptually simple yet asymptotically efficient probabilistic solutions based on recursively exchanging fingerprints for data structures of exponentially decreasing size, obtained by recursively partitioning the data structures.
 We apply the technique to sets, maps and radix trees.
-For data structures containing n items, this leads to $\complexity{log(n)}$ round-trips.
+For data structures containing $n$ items, this leads to $\complexity{log(n)}$ round-trips.
 We give a scheme by which the fingerprints can be computed in $\complexity{log(n)}$ time, based on an auxiliary data structure which requires $\complexity{n}$ space and which can be updated to reflect changes to the underlying data structure in $\complexity{log(n)}$ time.
 
-To minimize round-trips, the technique requires up to $\complexity{n}$ space per synchronization session.
+To minimize the number of round-trips, the technique requires up to $\complexity{n}$ space per synchronization session.
 It can be adapted to require only a bounded amount of memory, which is essential for robust, scalable implementations.
-While this increases the worst-case number of round-trips, it guarantees continuous progress, in particular even in adversarial environments.
+While this increases the worst-case number of round-trips, it guarantees continuous progress, even in adversarial environments.
