@@ -90,6 +90,8 @@
 \newcommand{\fp}[1]{\mathit{fp}(#1)}
 \newcommand{\ifpmanual}[3]{({#1}, {#2}, {#3})}
 \newcommand{\ifp}[3]{\ifpmanual{#1}{#2}{\fp{\interval{#1}{#2}{#3}}}}
+\newcommand{\iis}[3]{({#1}, {#2}, {#3})}
+\newcommand{\iisnatural}[3]{({#1}, {#2}, \interval{#1}{#2}{#3})}
 \newcommand{\ifpempty}[2]{({#1}, {#2})}
 \newcommand{\ifpsingle}[2]{\ifpmanual{#1}{#2}{\emptyset}}
 \newcommand{\ifpcontain}[3]{\ifpmanual{#1}{#2}{\groupadd{\fp{x}}{#3}}}
