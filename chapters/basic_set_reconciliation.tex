@@ -1,5 +1,62 @@
 % !TEX root = ../main.tex
 
+\newcommand{\examplefp}[1]{#1}
+\newcommand{\fpa}[0]{\examplefp{144}}
+\newcommand{\fpb}[0]{\examplefp{194}}
+\newcommand{\fpc}[0]{\examplefp{240}}
+\newcommand{\fpd}[0]{\examplefp{245}}
+\newcommand{\fpe}[0]{\examplefp{76}}
+\newcommand{\fpf}[0]{\examplefp{221}}
+\newcommand{\fpg}[0]{\examplefp{224}}
+\newcommand{\fph}[0]{\examplefp{65}}
+\newcommand{\fpcd}[0]{\examplefp{229}}
+\newcommand{\fpacd}[0]{\examplefp{117}}
+\newcommand{\fpefgh}[0]{\examplefp{74}}
+\newcommand{\fpbcdh}[0]{\examplefp{232}}
+\newcommand{\fpzero}[0]{\examplefp{0}}
+
+\newcommand{\examplea}[0]{a}
+\newcommand{\exampleb}[0]{b}
+\newcommand{\examplec}[0]{c}
+\newcommand{\exampled}[0]{d}
+\newcommand{\examplee}[0]{e}
+\newcommand{\examplef}[0]{f}
+\newcommand{\exampleg}[0]{g}
+\newcommand{\exampleh}[0]{h}
+\newcommand{\examplei}[0]{i}
+
+\newcommand{\examplefpi}[3]{
+  $\ifpmanual{#1}{#2}{\fp{#3}}$
+}
+\newcommand{\exampleiis}[3]{
+\begin{tabular}{ c | c  | c }
+{#1} & {#3} & {#2} \\ 
+\end{tabular}
+}
+
+\tikzset{
+fpi/.style={
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzset{
+iis/.style={
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzset{
+local/.style={
+  }
+}
+
+\tikzstyle{edge} = [draw,thick,opacity=0.25]
+
 In this chapter, we consider the set reconciliation protocol sketched in the introduction in greater detail.
 We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, and we prove its correctness in \cref{set-reconciliation-simple-correct}. \Cref{set-reconciliation-simple-optimizations} lists optimizations which eliminate unnecessary work from the protocol. We then define the proper set reconciliation protocol in \cref{set-reconciliation-def} and  do a complexity analysis in \cref{set-reconciliation-complexity}. We conclude the chapter with an example application in \cref{set-reconciliation-simple-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
 
@@ -24,7 +81,7 @@ When a node $\mathcal{X}_i$ receives a message, it performs the following action
   \item If the accumulated response is nonempty, it is sent to the other node. Otherwise, the protocol has terminated successfully.
 \end{itemize}
 
-To initiate reconciliation of an interval $[x, y)$, a node $\mathcal{X}_i$ acts as if it had just received an interval fingerprint $\ifp{x}{y}{v}$, where $v ~= \fp{\interval{x}{y}{X_i}}$.
+To initiate reconciliation of an interval $[x, y)$, a node $\mathcal{X}_i$ sends a message containing solely the interval fingerprint $\ifp{x}{y}{X_i}$.
 
 \Cref{simple-set-reconciliation-example} gives an example run of the protocol.
 
@@ -291,60 +348,168 @@ We now prove the correctness of the protocol. The protocol is correct if for all
 
 \case[Recurse] Let $\intcount{i} \defeq \abs{\interval{x}{y}{X_i}}$ and $\intcount{j} \defeq \abs{\interval{x}{y}{X_j}}$. $\intcount{j} \geq 2$, since otherwise $\mathcal{X}_j$ would have sent an item set for the interval. Similarly, $\intcount{i} \geq 2$, since we are not in \cref{case-ifp-anchor}. Thus, $\intcount{i} + \intcount{j} \geq 4$, and the protocol has already been proven correct for all cases where $\intcount{i} + \intcount{j} < 4$. 
 
-We can thus finish the proof by induction on $\intcount{i} + \intcount{j}$, using the induction hypothesis that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_i}} + \abs{\interval{x'}{y'}{X_j}} < n$ the protocol correctly reconciles $\interval{x'}{y'}{X_i}$ and $\interval{x'}{y'}{X_j}$.
+We can thus finish the proof by induction on $\intcount{i} + \intcount{j}$, using the induction hypothesis that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_i}} + \abs{\interval{x'}{y'}{X_j}} < \intcount{i} + \intcount{j}$ the protocol correctly reconciles $\interval{x'}{y'}{X_i}$ and $\interval{x'}{y'}{X_j}$.
 
-$\mathcal{X}_i$ partitions the interval into $k \geq 2$ subintervals, of which at least two must be nonempty. Thus $\abs{\interval{m_l}{m_{l + 1}}{X_i}} < \intcount{i}$ for all $0 \leq l < k$.
+$\mathcal{X}_i$ partitions the interval into $k \geq 2$ subintervals, of which at least two must be nonempty.
+Thus $\abs{\interval{m_l}{m_{l + 1}}{X_i}} < \intcount{i}$ for all $0 \leq l < k$.
+Furthermore, $\interval{m_l}{m_{l + 1}}{X_j} \subseteq \interval{x}{y}{X_j}$ and thus $\abs{\interval{m_l}{m_{l + 1}}{X_j}} \leq \abs{\interval{x}{y}{X_j}}$, so overall we have $\abs{\interval{m_l}{m_{l + 1}}{X_i}} + \abs{\interval{m_l}{m_{l + 1}}{X_j}} < \intcount{i} + \intcount{j}$ and can apply the induction hypothesis to conclude that every subinterval is correctly reconciled. Since the subintervals partition the original interval, the original interval is then correctly reconciled as well.
 \end{caselist}
 \end{caselist}
 
-So consider the case where $\mathcal{X}_i$ has received a message pertaining to the interval $[x, y)$. 
+\section{Complexity Analysis}
+\label{set-reconciliation-complexity}
 
+The protocol gives nodes the freedom to respond to an interval fingerprint with an interval item set even if the interval fingerprint is arbitrarily large. For a meaningful complexity analysis we need to restrict the behavior of the node, a realistic modus operandi is for a node to send an interval item set whenever it holds a number of items less than or equal to some threshold $t \in \mathbb{N}, t \geq 1$ within the interval. Higher choices for $t$ reduce the number of roundtrips, but increase the probability that a items is being sent even though the other node already holds it.
 
+A node is similarly given freedom over the number of subintervals into which to split an interval when recursing. We will assume a node always splits into at most $b \in \mathbb{N}, b \geq 2$ subintervals. As with $t$, higher numbers reduce the number of roundtrips at the cost of potentially sending items or fingerprints that did not need sending.
 
+Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{min} \defeq \mathit{min}(n_0, n_1)$, $n_{max} \defeq \mathit{max}(n_0, n_1)$, $n_{\cap} \def \abs{\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1}}$, $n_{\cup} \def \abs{\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}) \setminus (\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1})}$.
 
+\subsection{Preliminary Observations}
 
+The bit-level message complexity depends on the precise encoding of messages. When partitioning an interval into subintervals, it is not necessary to encode both boundaries of every interval since they overlap. When splitting into $b$ subintervals, it suffices to transmit $b + 1$ many boundaries (and of course the corresponding $b$ fingerprints/item sets). If the receiving node remembers which boundaries it has sent in the last round, the two outer boundaries can also be omitted. We will refer to the protocol variant where nodes remember boundaries across communication rounds as the \defined{stateful} protocol variant, and the variant where the outer boundaries of a sequence of subintervals needs to be transmitted as the \defined{stateless} protocol variant.
 
+A helpful observation for the following analysis is that the interval fingerprints that are being exchanged during a protocol run form a rooted tree where every vertex has at most $b$ children. When a leaf of the tree is reached, an exchange of interval item sets follows. Equal fingerprints can also cut the tree short, but for the following worst-case analysis we will assume this does not occur.
 
-The proof is necessarily rather technical, but conceptually correctness follows rather straightforwardly by induction from the fact that two sets can be reconciled by individually reconciling their partitions:
+Node $\mathcal{X}_i$ can branch at most $\ceil{\mathit{log}_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$. The number of vertices of such a tree complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{min} \leq 2n \in \complexity{n}$.
 
-\begin{proposition}
-\label{partition-union}
-Let $S = \biguplus_{i \in \mathcal{I}} S_i, T = \biguplus_{i \in \mathcal{I}} T_i$, then $S \cup T = \biguplus_{i \in \mathcal{I}} (S_i \cup T_i)$.
-\end{proposition}
+The parameter $t$ determines when recursion is cut off, and thus influences the height of the tree. For $t = 1$, the protocol recurses as far as possible. For $t = b$, the last level of recursion is cut off, for $t = b^2$ the last two levels, and so on. Overall, the height of the tree is reduced by $\floor{\mathit{log}_{b}(t)}$.
 
-Without loss of generality we consider the case where $\mathcal{X}_0$ has sent the interval fingerprint $\ifp{x}{y}{X_0}$. Let $\intcount{0} \defeq \abs{\interval{x}{y}{X_0}}$ and $\intcount{1} \defeq \abs{\interval{x}{y}{X_1}}$.
-We prove the statement by induction on $\intcount{0} + \intcount{1}$. There are four base cases:
+\subsection{Communication Rounds}
 
-\begin{caselist}
-\case[Equal Fingerprints] \label{fingerprint-eq} If $\fp{\interval{x}{y}{X_0}} = \fp{\interval{x}{y}{X_1}}$, then the protocol terminates immediately and no changes are performed by any node. Assuming no fingerprint collision occurred, $\interval{x}{y}{X_0} = \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
+The number of communication rounds clearly corresponds to the height of the tree, plus $2$ to account for the exchange of interval item sets, so the worst-case is $2 + 2 \cdot\ceil{\mathit{log}_{b}(n_{min})} - \floor{\mathit{log}_{b}(t)} \in \complexity{\mathit{log}_{b}(n)}$. This number cannot be bounded by $n_{\triangle}$, as witnessed by problem instances where one node is missing exactly one item compared to the other node. In such an instance, $b - 1$ branches in each recursion step result in equal fingerprints, but the one branch that does continue reaches the recursion anchor only after the full number of rounds. See \cref{fig:worst-rounds} for an example.
 
-\case[Receiving Empty] \label{x0-empty} If $\interval{x}{y}{X_0} = \emptyset$, its fingerprint is $\neutraladd$, and $\mathcal{X}_1$ sends all items in $\interval{x}{y}{X_1}$. $\mathcal{X}_1$ does not modify the set it holds, so it ends up with $\interval{x}{y}{X_1} = \interval{x}{y}{X_1} \cup \emptyset = \interval{x}{y}{X_1} \cup \interval{x}{y}{X_0} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired. $\mathcal{X}_0$ does not receive any interval fingerprint, so it does not send a response and the protocol terminates. It adds the received items to its local copy, so it ends up with $\emptyset \cup \interval{x}{y}{X_1} = \interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}$ as desired.
+\begin{figure*}
+$X_0 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \exampleg, \exampleh \}$
+\hfill
+$X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh \}$
 
-\case[Sending Empty] \label{x1-empty} If $\interval{x}{y}{X_0} \neq \emptyset$ but $\interval{x}{y}{X_1} = \emptyset$, then $\mathcal{X}_1$ responds to the interval fingerprint sent by $\mathcal{X}_0$ by sending the interval fingerprint for the same interval, which is necessarily $\ifpmanual{x}{y}{\neutraladd}$. Correctness then follows from \cref{x0-empty} with the roles reversed.
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale, font=\tiny]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh\}}};
 
-\case[Two Singletons] \label{two-singletons} If $\intcount{0} = 1 = \intcount{1}$ but $\fp{\interval{x}{y}{X_0}} \neq \fp{\interval{x}{y}{X_1}}$, let $u_i$ be the one item held by $\mathcal{X}_i$ in the interval. $\mathcal{X}_1$ responds with the two interval fingerprints $\ifp{x}{u_1}{X_1} = \ifpmanual{x}{u_1}{\neutraladd}$ and $\ifp{u_1}{y}{X_1} = \ifpmanual{u_1}{y}{\fp{u_1}}$. By \cref{partition-union} we only need to show that these two intervals are being reconciled correctly. Correct reconciliation of $\ifpmanual{x}{u_1}{\neutraladd}$ is covered by \cref{x0-empty} with the roles reversed, it remains to show that $\ifpmanual{u_1}{y}{\fp{u_1}}$ is reconciled correctly. Assuming no fingerprint collision occurred, $u_0 \neq u_1$.
+		\node (v00) at (-4, -0) [fpi] {\examplefpi{\examplea}{\examplee}{\{\examplea, \exampleb, \examplec, \exampled\}}};
+		\node (v01) at (4, -0) [fpi] {\examplefpi{\examplee}{\examplei}{\{\examplee, \exampleg, \exampleh\}}};
 
-\begin{caselist}
-\case \label{two-singletons-1}  If $u_0 < u_1$, then $\fp{\interval{u_1}{y}{X_0}} = \neutraladd$, so $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is covered by \cref{x1-empty} with the roles reversed.
+                \node (v10) at (2, -1) [fpi] {\examplefpi{\examplee}{\exampleg}{\{\examplee, \examplef\}}};
+                \node (v11) at (6, -1) [fpi] {\examplefpi{\exampleg}{\examplei}{\{\exampleg, \exampleh\}}};
 
-\case \label{two-singletons-2} So assume that $u_0 > u_1$. Then $\mathcal{X}_0$ receiving $\ifpmanual{u_1}{y}{\fp{u_1}}$ is again \cref{two-singletons}, with the roles reversed. This time however, the initiating node holds the lesser item, so \cref{two-singletons-1} applies and correctness follows.
-\end{caselist}
-\end{caselist}
+                \node (v20) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}};
 
-These base cases cover all configurations where $\abs{\interval{x}{y}{X_0}} + \abs{\interval{x}{y}{X_1}} \leq 2$.
-So let $n \defeq \intcount{0} + \intcount{1} > 2$, and assume that for all $x', y' \in U$ such that $\abs{\interval{x'}{y'}{X_0}} + \abs{\interval{x'}{y'}{X_1}} < n$ the protocol correctly reconciles $\interval{x'}{y'}{X_0}$ and $\interval{x'}{y'}{X_1}$.
+                \node (v30) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}};
 
-$\mathcal{X}_1$ responds with two interval fingerprints $\ifp{x}{m}{X_1}$ and $\ifp{m}{y}{X_1}$ for some $m \in X_1, x \preceq m \preceq y$.
-By \cref{partition-union} we only need to show that these two intervals are being reconciled correctly.
-Note that $\abs{\interval{x}{m}{X_1}} + \abs{\interval{m}{y}{X_1}} = \intcount{1}$ and $\abs{\interval{x}{m}{X_0}} + \abs{\interval{m}{y}{X_0}} = \intcount{0}$. Since $n > 2$, at least one $\intcount{i}$ is greater than $1$, so that $\mathcal{X}_i$ will split the interval into two smaller ones, to which we can apply the induction hypothesis.
+		%edges
+                \draw (vroot) edge[edge] (v00);
+                \draw (vroot) edge[edge] (v01);
 
-\begin{caselist}
-\case If $\intcount{1} > 1$, then $\abs{\interval{x}{m}{X_1}} < \intcount{1}$, and $\abs{\interval{x}{m}{X_0}} \leq \intcount{0}$, thus $\abs{\interval{x}{m}{X_1}} + \abs{\interval{x}{m}{X_0}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_1}} + \abs{\interval{m}{y}{X_0}} < n$ follows analogously.
+		\draw (v01) edge[edge] (v10);
+		\draw (v01) edge[edge] (v11);
 
-\case Otherwise, if $\intcount{1} = 1$, then $\intcount{0} > 1$, thus $\abs{\interval{x}{m}{X_0}} < \intcount{0}$, and $\abs{\interval{x}{m}{X_1}} \leq \intcount{1}$, thus $\abs{\interval{x}{m}{X_0}} + \abs{\interval{x}{m}{X_1}} < n$ and the interval is reconciled correctly by induction hypothesis. For the other interval, $\abs{\interval{m}{y}{X_0}} + \abs{\interval{m}{y}{X_1}} < n$ follows analogously.
-\end{caselist}
+		\draw (v10) edge[edge] (v20);
+		
+		\draw (v20) edge[edge] (v30);
+	\end{pgfonlayer}
+	
+	\begin{pgfonlayer}{background}
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -1) -- (-8, -1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -2) -- (8, -2);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -3) -- (-8, -3);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
 
-This concludes the proof. Note that when $\mathcal{X}_i$ splits an interval $\interval{x}{y}{X_i}$ into $\interval{x}{m}{X_i}$ and $\interval{m}{y}{X_i}$, then $m$ has to be from $X_i$ (as opposed to $U \setminus X_i$) so that \cref{two-singletons-1} can be reduced to \cref{x1-empty}, and \cref{two-singletons-2} to \cref{two-singletons-1}. The induction step however still works if $m$ is chosen from $U$, so the restriction can be lifted for intervals that contain at least two items. This can become relevant if some items from $U$ can be encoded more efficiently than others.
+\caption{An example run of the protocol that takes the greatest possible number of rounds even though $n_{\triangle} = 1$. $b \defeq 2, t \defeq 1$.}
+
+\label{fig:worst-rounds}
+
+\end{figure*}
+
+\subsection{Communication Complexity}
+
+The total number of bytes that needs to be transmitted during a protocol run is proportional to the number of vertices in the tree. A group of $b$ vertices whose intervals partition the parent vertex require $(b - 1) \cdot \itemsize$ bytes to encode the interval boundaries in the stateful protocol variant, $(b + 1) \cdot \itemsize$ in the stateless variant. Each interval fingerprint adds another $\fpsize$ bytes for the fingerprint itself. The exchange of interval item sets consists in the worst case of exchanging every item using $\ceil{\frac{n}{t}}$ interval item sets, adding another $4 \cdot \itemsize + t \cdot \itemsize$ bytes in the stateless version (the first summand accounts for the two boundary items being sent by each node), or simply $t \cdot \itemsize$ bytes in the stateful version.
+
+Overall, the complexity is TODO
+
+\Cref{fig:worst-bytes} shows a worst-case example, in which the tree of height $h \defeq \mathit{log}_{b}(2 \cdot n_{min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices. 
+
+\begin{figure*}
+$X_0 \defeq \{\examplea, \examplec, \examplee, \exampleg \}$
+\hfill
+$X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh\}$
+
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale, font=\tiny]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh\}}};
+
+		\node (v00) at (-4, -0) [fpi] {\examplefpi{\examplea}{\examplee}{\{\examplea, \examplec\}}};
+		\node (v01) at (4, -0) [fpi] {\examplefpi{\examplee}{\examplei}{\{\examplee, \exampleg\}}};
+
+                \node (v10) at (-6, -1) [fpi] {\examplefpi{\examplea}{\examplec}{\{\examplea, \exampleb\}}};
+                \node (v11) at (-2, -1) [fpi] {\examplefpi{\examplec}{\examplee}{\{\examplec, \exampled\}}};
+                \node (v12) at (2, -1) [fpi] {\examplefpi{\examplee}{\exampleg}{\{\examplee, \examplef\}}};
+                \node (v13) at (6, -1) [fpi] {\examplefpi{\exampleg}{\examplei}{\{\exampleg, \exampleh\}}};
+
+                \node (v20) at (-6, -2) [iis] {\exampleiis{\examplea}{\examplec}{\{\examplea\}}};
+                \node (v21) at (-2, -2) [iis] {\exampleiis{\examplec}{\examplee}{\{\examplec\}}};
+                \node (v22) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}};
+                \node (v23) at (6, -2) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleg\}}};
+
+                \node (v30) at (-6, -3) [iis] {\exampleiis{\examplea}{\examplec}{\{\exampleb\}}};
+                \node (v31) at (-2, -3) [iis] {\exampleiis{\examplec}{\examplee}{\{\exampled\}}};
+                \node (v32) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}};
+                \node (v33) at (6, -3) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleh\}}};
+		%edges
+                \draw (vroot) edge[edge] (v00);
+                \draw (vroot) edge[edge] (v01);
+
+		\draw (v00) edge[edge] (v10);
+		\draw (v00) edge[edge] (v11);
+		\draw (v01) edge[edge] (v12);
+		\draw (v01) edge[edge] (v13);
+
+		\draw (v10) edge[edge] (v20);
+		\draw (v11) edge[edge] (v21);
+		\draw (v12) edge[edge] (v22);
+		\draw (v13) edge[edge] (v23);
+
+		\draw (v20) edge[edge] (v30);
+		\draw (v21) edge[edge] (v31);
+		\draw (v22) edge[edge] (v32);
+		\draw (v23) edge[edge] (v33);
+	\end{pgfonlayer}
+	
+	\begin{pgfonlayer}{background}
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -1) -- (-8, -1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -2) -- (8, -2);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -3) -- (-8, -3);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\caption{An example run of the protocol that requires transmitting the maximum amount of bytes. $b \defeq 2, t \defeq 1$.}
+
+\label{fig:worst-bytes}
+\end{figure*}
+
+\subsection{Computational Complexity}
+
+TODO (write fingerprint chapter first?)
 
 \section{Generic Optimizations}
 \label{set-reconciliation-simple-optimizations}
@@ -400,14 +565,6 @@ Splitting intervals into partitions of unequal sizes can be beneficial if missin
 %If the protocol is made aware of the difference and inlines items, most of the optimizations from \cref{utilizing-boundaries} become inapplicable, since knowing that the other node holds an item hashing to some lower boundary of an interval is not the same as obtaining that item. The only optimization in the same spirit that can be applied as the following: if a node $\mathcal{X}_i$ receives an interval fingerprint $\ifpmanual{m}{y}{\fp{m}}$, it can act as if it received an interval containing only $m$ and it additionally sends all items in $\intervalx{m}{y}{X_i}$.
 %
 %The interval boundaries do not necessarily have to be only the hashes of the items, additional information can be added so that the order on the boundaries exhibit similarity with some order on the items. Hashing has to be involved though in order to map the infinite universe to a finite set of boundaries with a low probability of collisions.
-
-\section{Recursive Set Reconciliation}
-\label{set-reconciliation-def}
-
-\section{Complexity Analysis}
-\label{set-reconciliation-complexity}
-
-TODO: I am looking forward to writing this section about as much as you are probably looking forward to reading it. 
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-simple-graphs}

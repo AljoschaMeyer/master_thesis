@@ -5,6 +5,8 @@
 
 
 
+
+
 \RequirePackage{mathtools}
 \newcommand{\defeq}{\vcentcolon=}
 \newcommand{\eqdef}{=\vcentcolon}
@@ -22,6 +24,23 @@
 \newcommand{\abs}[1]{|{#1}|}
 
 \newcommand{\defined}[1]{\textit{#1}}
+
+
+
+
+\usepackage{environ}
+\makeatletter
+\newsavebox{\measure@tikzpicture}
+\NewEnviron{scaletikzpicturetowidth}[1]{%
+  \def\tikz@width{#1}%
+  \def\tikzscale{1}\begin{lrbox}{\measure@tikzpicture}%
+  \BODY
+  \end{lrbox}%
+  \pgfmathparse{#1/\wd\measure@tikzpicture}%
+  \edef\tikzscale{\pgfmathresult}%
+  \BODY
+}
+\makeatother
 
 
 
@@ -97,3 +116,6 @@
 \newcommand{\ifpcontain}[3]{\ifpmanual{#1}{#2}{\groupadd{\fp{x}}{#3}}}
 
 \newcommand{\successor}[1]{\mathit{successor({#1})}}
+
+\newcommand{\fpsize}[0]{s_{fp}}
+\newcommand{\itemsize}[0]{s_{item}}
