@@ -58,9 +58,10 @@ local/.style={
 \tikzstyle{edge} = [draw,thick,opacity=0.25]
 
 In this chapter, we consider the set reconciliation protocol sketched in the introduction in greater detail.
-We define an unoptimized but simple version of the protocol in \cref{set-reconciliation-simple-def}, and we prove its correctness in \cref{set-reconciliation-simple-correct}. \Cref{set-reconciliation-simple-optimizations} lists optimizations which eliminate unnecessary work from the protocol. We then define the proper set reconciliation protocol in \cref{set-reconciliation-def} and  do a complexity analysis in \cref{set-reconciliation-complexity}. We conclude the chapter with an example application in \cref{set-reconciliation-simple-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
+We define the protocol in \cref{set-reconciliation-def}, prove its correctness in \cref{set-reconciliation-simple-correct}, and do a complexity analysis in \cref{set-reconciliation-complexity}.  \Cref{set-reconciliation-simple-optimizations} lists some optimizations which do not change the asymptotic complexity but which avoid some unnecessary work. We conclude the chapter with an example application in \cref{set-reconciliation-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
 
 \section{Recursive Set Reconciliation}
+\label{set-reconciliation-def}
 
 The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
 $\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{interval item set}.
@@ -83,251 +84,17 @@ When a node $\mathcal{X}_i$ receives a message, it performs the following action
 
 To initiate reconciliation of an interval $[x, y)$, a node $\mathcal{X}_i$ sends a message containing solely the interval fingerprint $\ifp{x}{y}{X_i}$.
 
-\Cref{simple-set-reconciliation-example} gives an example run of the protocol.
+\Cref{simple-set-reconciliation-example} gives an example run of the protocol. TODO
 
-%\section{Simple Recursive Set Reconciliation}
-%\label{set-reconciliation-simple-def}
-%
-%The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
-%$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{items}.
-%An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an item is simply some $x \in U$.
-%
-%Recall that $\fp{A}$ denotes the fingerprint for $A \subseteq U$, and that $\interval{x}{y}{A} \defeq \{a \in A | x \preceq a \prec y\}$.
-%
-%When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
-%
-%\begin{itemize}
-%  \item For every item in the message, the item is added to the locally stored set $X_i$.
-%  \item For every interval fingerprint $\ifp{x}{y}{X_j}$ in the message, it does one of following:
-%    \begin{caselist}
-%      \case[Equal Fingerprints] \label{def-fingerprint-eq}  If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, nothing happens.
-%      \case[Receiving Empty] If $\fp{\interval{x}{y}{X_j}} = \neutraladd$, it adds all items in $\interval{x}{y}{X_i}$ to the response.
-%      \case[Sending Empty] \label{def-x1-empty} If $\fp{\interval{x}{y}{X_j}} \neq \neutraladd = \fp{\interval{x}{y}{X_i}}$, it adds the interval fingerprint $\ifp{x}{y}{X_i} = \ifpmanual{x}{y}{\neutraladd}$ to the response.
-%      \case[Recursive] \label{def-recursive} Otherwise, it finds some middle item $m \in X_i$ that equally partitions the items of $X_i$ within the interval, i.e. $m$ is chosen such that $-1 \leq \abs{\{a \in X_i | x \preceq a \prec m\}} - \abs{\{b \in X_i | m \preceq b \prec y\}} \leq 0$. It then adds the interval fingerprints $\ifp{x}{m}{X_i}$ and $\ifp{m}{y}{X_i}$ to the response.
-%    \end{caselist}
-%  \item If the accumulated response is nonempty, it is sent to the other node.
-%\end{itemize}
-%
-%To initiate reconciliation of an interval, a node sends a message consisting solely of its interval fingerprint of the interval to reconcile.
-%
-%\Cref{simple-set-reconciliation-example} gives an example run of the protocol.
-%
-%\begin{figure*}
-%\newcommand{\examplefp}[1]{#1}
-%\newcommand{\fpa}[0]{\examplefp{144}}
-%\newcommand{\fpb}[0]{\examplefp{194}}
-%\newcommand{\fpc}[0]{\examplefp{240}}
-%\newcommand{\fpd}[0]{\examplefp{245}}
-%\newcommand{\fpe}[0]{\examplefp{76}}
-%\newcommand{\fpf}[0]{\examplefp{221}}
-%\newcommand{\fpg}[0]{\examplefp{224}}
-%\newcommand{\fph}[0]{\examplefp{65}}
-%\newcommand{\fpcd}[0]{\examplefp{229}}
-%\newcommand{\fpacd}[0]{\examplefp{117}}
-%\newcommand{\fpefgh}[0]{\examplefp{74}}
-%\newcommand{\fpbcdh}[0]{\examplefp{232}}
-%\newcommand{\fpzero}[0]{\examplefp{0}}
-%
-%\newcommand{\examplea}[0]{a}
-%\newcommand{\exampleb}[0]{b}
-%\newcommand{\examplec}[0]{c}
-%\newcommand{\exampled}[0]{d}
-%\newcommand{\examplee}[0]{e}
-%\newcommand{\examplef}[0]{f}
-%\newcommand{\exampleg}[0]{g}
-%\newcommand{\exampleh}[0]{h}
-%\newcommand{\examplei}[0]{i}
-%
-%\newcommand{\examplefpi}[5]{
-%\begin{minipage}{3.2cm}
-%  $\ifpmanual{#2}{#3}{\fp{\interval{#2}{#3}{X_{#1}}}} = \linebreak \ifpmanual{#2}{#3}{\fp{#5}} = \linebreak \ifpmanual{#2}{#3}{#4}$
-%\end{minipage}
-%}
-%\newcommand{\exampleitems}[1]{$#1$}
-%
-%\begin{center}
-%\begin{tabular}{ c || c | c | c | c | c | c | c | c | c }
-%item & \examplea & \exampleb & \examplec & \exampled & \examplee & \examplef & \exampleg & \exampleh & \examplei \\
-%\hline
-%$\fp{item}$ & \fpa & \fpb & \fpc & \fpd & \fpe & \fpf & \fpg & \fph & \fpzero \\ 
-%\end{tabular}
-%\end{center}
-%
-%$X_0 \defeq \{\exampleb, \examplec, \exampled, \exampleh \}$
-%\hfill
-%$X_1 \defeq \{\examplea, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh \}$
-%
-%
-%\tikzset{
-%fpi/.style={
-%  %draw=none,
-%  %inner sep=0pt,
-%  %text width=100pt,
-%  %minimum size=36pt,
-%  align=left,
-%  draw=black,
-%  fill=white
-%  }
-%}
-%
-%\tikzset{
-%items/.style={
-%  %draw=none,
-%  %inner sep=0pt,
-%  %text width=100pt,
-%  %minimum size=36pt,
-%  shape=ellipse,
-%  align=left,
-%  draw=black,
-%  fill=white
-%  }
-%}
-%
-%\tikzset{
-%local/.style={
-%  %draw=none,
-%  %inner sep=0pt,
-%  %text width=100pt,
-%  %minimum size=36pt,
-%%  shape=ellipse,
-%%  align=left,
-%%  draw=black,
-%%  fill=white
-%  }
-%}
-%
-%\tikzstyle{edge} = [draw,thick,opacity=0.25]
-%
-%\begin{tikzpicture}[xscale=1.25,yscale=2.25,font=\footnotesize]
-%	%\useasboundingbox (0,0) rectangle (17,5);
-%	\pgfdeclarelayer{background}
-%	\pgfdeclarelayer{foreground}
-%	\pgfsetlayers{background,main,foreground}
-%	
-%	\begin{pgfonlayer}{main}
-%		%vertices
-%		\node (v60) at (6,-0) [fpi] {\examplefpi{0}{\examplea}{\examplei}{\fpbcdh}{\{\exampleb, \examplec, \exampled, \exampleh\}}};
-%
-%                \node (v31) at (3,-1) [fpi] {\examplefpi{1}{\examplea}{\examplee}{\fpacd}{\{\examplea, \examplec, \exampled\}}};
-%                \node (v91) at (9,-1) [fpi] {\examplefpi{1}{\examplee}{\examplei}{\fpefgh}{\{\examplee, \examplef, \exampleg, \exampleh\}}};
-%
-%                \node (v12) at (1,-2) [fpi] {\examplefpi{0}{\examplea}{\examplec}{\fpb}{\{\exampleb\}}};
-%                \node (v42) at (4,-2) [fpi] {\examplefpi{0}{\examplec}{\examplee}{\fpcd}{\{\examplec, \exampled\}}};
-%                \node (v72) at (7,-2) [fpi] {\examplefpi{0}{\examplee}{\exampleh}{\fpzero}{\emptyset}};
-%                \node (v102) at (10,-2) [fpi] {\examplefpi{0}{\exampleh}{\examplei}{\fph}{\{\exampleh\}}};
-%
-%                \node (v03) at (0,-3) [fpi] {\examplefpi{1}{\examplea}{\examplea}{\fpzero}{\emptyset}};
-%                \node (v23) at (4,-3) [fpi] {\examplefpi{1}{\examplea}{\examplec}{\fpa}{\{\examplea\}}};
-%                \node (v73) at (7,-3) [items] {\exampleitems{\{\examplee, \examplef, \exampleg\}}};
-%
-%                \node (v04) at (0,-4) [items] {\exampleitems{\emptyset}};
-%                \node (v14) at (2,-4) [fpi] {\examplefpi{0}{\examplea}{\exampleb}{\fpzero}{\emptyset}};
-%                \node (v34) at (6,-4) [fpi] {\examplefpi{0}{\exampleb}{\examplec}{\fpb}{\{\exampleb\}}};
-%
-%                \node (v15) at (2,-5) [items] {\exampleitems{\{\examplea\}}};
-%                \node (v35) at (6,-5) [fpi] {\examplefpi{1}{\exampleb}{\examplec}{\fpzero}{\emptyset}};
-%
-%                \node (v36) at (6,-6) [items] {\exampleitems{\{\exampleb\}}};
-%
-%                \node (x00) at (-3, -0) [local] {
-%\begin{minipage}{6cm}
-%\begin{center}
-%\begin{tabular}{ || c  c  c  c || }
-%\hline
-%\exampleb & \examplec & \exampled & \exampleh \\ 
-%\hline
-%\end{tabular}
-%\end{center}
-%\end{minipage}
-%};
-%
-%                \node (x01) at (-3, -1) [local] {
-%\begin{minipage}{6cm}
-%\begin{center}
-%\begin{tabular}{ || c  c  c |  c || }
-%\hline
-%\exampleb & \examplec & \exampled & \exampleh \\ 
-%\hline
-%\end{tabular}
-%\end{center}
-%\end{minipage}
-%};
-%
-%                \node (x02) at (-3, -2) [local] {
-%\begin{minipage}{6cm}
-%\begin{center}
-%\begin{tabular}{ || c | c  c || c |  c || }
-%\hline
-%\exampleb & \examplec & \exampled & & \exampleh \\ 
-%\hline
-%\end{tabular}
-%\end{center}
-%\end{minipage}
-%};
-%
-%                \node (x03) at (-3, -3) [local] {
-%\begin{minipage}{6cm}
-%\begin{center}
-%\begin{tabular}{ || c | c || c  c | c  c  c |  c || }
-%\hline
-% & \exampleb & \examplec & \exampled & \examplee & \examplef & \exampleg & \exampleh \\ 
-%\hline
-%\end{tabular}
-%\end{center}
-%\end{minipage}
-%};
-%
-%                \node (x03) at (-3, -4) [local] {
-%\begin{minipage}{6cm}
-%\begin{center}
-%\begin{tabular}{ || c | c  c || c | c | c ||  c || }
-%\hline
-%\exampleb & \examplec & \exampled & \examplee & \examplef & \exampleg & \exampleh \\ 
-%\hline
-%\end{tabular}
-%\end{center}
-%\end{minipage}
-%};
-%
-%		%edges
-%		\draw (v60) edge[edge] (v31);
-%		\draw (v60) edge[edge] (v91);
-%
-%		\draw (v31) edge[edge] (v12);
-%		\draw (v31) edge[edge] (v42);
-%		\draw (v91) edge[edge] (v72);
-%		\draw (v91) edge[edge] (v102);
-%		
-%		\draw (v12) edge[edge] (v03);
-%		\draw (v12) edge[edge] (v23);
-%		\draw (v72) edge[edge] (v73);
-%
-%		\draw (v03) edge[edge] (v04);
-%		\draw (v23) edge[edge] (v14);
-%		\draw (v23) edge[edge] (v34);
-%
-%		\draw (v14) edge[edge] (v15);
-%		\draw (v34) edge[edge] (v35);
-%
-%                \draw (v35) edge[edge] (v36);
-%	\end{pgfonlayer}
-%	
-%	\begin{pgfonlayer}{background}
-%		\draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](-1,0) -- (11, 0);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](11,-1) -- (-1, -1);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](-1,-2) -- (11, -2);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](11,-3) -- (-1, -3);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](-1,-4) -- (11, -4);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](11,-5) -- (-1, -5);
-%                \draw[-{Triangle[width=40pt,length=20pt,color=gray]}, line width=20pt, color=gray](-1,-6) -- (11, -6);
-%	\end{pgfonlayer}
-%\end{tikzpicture}
-%
-%\caption{TODO WIP, ignore for now}
-%
-%\label{simple-set-reconciliation-example}
-%
-%\end{figure*}
+\subsection{Observations}
+
+Partitioning based on a total order allows the nodes to perform a limited form of queries, i.e. range queries. A node can ask for reconciliation within a certain interval, rather than over the whole universe.
+
+If the universe $U$ is finite, the greatest element of the universe cannot be exchanged, since all ranges have an exclusive upper boundary. We will thus assume that for a universe $U$ of interest, nodes are actually using $\tilde{U} \defeq U \mathbin{\dot{\cup}} \top$ with $u \preceq \top$ for all $u \in U$.
+
+If the universe $U$ is not finite, then there are items that require an arbitrary amount of bytes to encode. Since the protocol needs to transmit items to denote interval boundaries, no reasonably complexity guarantees can be given for infinite universes. We will thus assume $U$ to be finite and small enough that items can be reasonably encoded. This assumption is not very restrictive in practice because nodes can always synchronize hashes of items rather than the items themselves. The protocol can then be either followed by a phase where hashes of interest are transferred and anwered by the actual items, or the protocol can be made aware of the distinction and use hashes as interval boundaries while transmitting actual items for interval item sets.
+
+When reconciling hashes in place of actual items, any semantically interesting order on the items would be replaced by an arbitrary order on the hashes. But rather than using just the hashes as interval boundaries, one can just as well add additional information. For example if the universe of interest consists of timestamped strings of arbitrary length, the interval boundaries can consist of timestamped hashes, ordered by timestamp first and using the numeric order on the hashes as a tiebreaker. \Cref{set-reconciliation-graphs} gives a more detailed example for utilizing this technique.
 
 \section{Proof of Correctness}
 \label{set-reconciliation-simple-correct}
@@ -363,15 +130,13 @@ The protocol gives nodes the freedom to respond to an interval fingerprint with 
 
 A node is similarly given freedom over the number of subintervals into which to split an interval when recursing. We will assume a node always splits into at most $b \in \mathbb{N}, b \geq 2$ subintervals. As with $t$, higher numbers reduce the number of roundtrips at the cost of potentially sending items or fingerprints that did not need sending.
 
-Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{min} \defeq \mathit{min}(n_0, n_1)$, $n_{max} \defeq \mathit{max}(n_0, n_1)$, $n_{\cap} \def \abs{\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1}}$, $n_{\cup} \def \abs{\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}) \setminus (\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1})}$.
+Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{min} \defeq \mathit{min}(n_0, n_1)$, $n_{max} \defeq \mathit{max}(n_0, n_1)$, $n_{\cap} \def \abs{\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1}}$, $n_{\cup} \def \abs{\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}) \setminus (\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1})}$. TODO remove those that are not needed
 
 \subsection{Preliminary Observations}
 
-The bit-level message complexity depends on the precise encoding of messages. When partitioning an interval into subintervals, it is not necessary to encode both boundaries of every interval since they overlap. When splitting into $b$ subintervals, it suffices to transmit $b + 1$ many boundaries (and of course the corresponding $b$ fingerprints/item sets). If the receiving node remembers which boundaries it has sent in the last round, the two outer boundaries can also be omitted. We will refer to the protocol variant where nodes remember boundaries across communication rounds as the \defined{stateful} protocol variant, and the variant where the outer boundaries of a sequence of subintervals needs to be transmitted as the \defined{stateless} protocol variant.
-
 A helpful observation for the following analysis is that the interval fingerprints that are being exchanged during a protocol run form a rooted tree where every vertex has at most $b$ children. When a leaf of the tree is reached, an exchange of interval item sets follows. Equal fingerprints can also cut the tree short, but for the following worst-case analysis we will assume this does not occur.
 
-Node $\mathcal{X}_i$ can branch at most $\ceil{\mathit{log}_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$. The number of vertices of such a tree complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{min} \leq 2n \in \complexity{n}$.
+Node $\mathcal{X}_i$ can branch at most $\ceil{\mathit{log}_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$. The number of vertices of such a complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{min} \leq 2n \in \complexity{n}$.
 
 The parameter $t$ determines when recursion is cut off, and thus influences the height of the tree. For $t = 1$, the protocol recurses as far as possible. For $t = b$, the last level of recursion is cut off, for $t = b^2$ the last two levels, and so on. Overall, the height of the tree is reduced by $\floor{\mathit{log}_{b}(t)}$.
 
@@ -434,11 +199,13 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 
 \subsection{Communication Complexity}
 
-The total number of bytes that needs to be transmitted during a protocol run is proportional to the number of vertices in the tree. A group of $b$ vertices whose intervals partition the parent vertex require $(b - 1) \cdot \itemsize$ bytes to encode the interval boundaries in the stateful protocol variant, $(b + 1) \cdot \itemsize$ in the stateless variant. Each interval fingerprint adds another $\fpsize$ bytes for the fingerprint itself. The exchange of interval item sets consists in the worst case of exchanging every item using $\ceil{\frac{n}{t}}$ interval item sets, adding another $4 \cdot \itemsize + t \cdot \itemsize$ bytes in the stateless version (the first summand accounts for the two boundary items being sent by each node), or simply $t \cdot \itemsize$ bytes in the stateful version.
+The total number of bits that needs to be transmitted during a protocol run is proportional to the number of vertices in the tree. Every interval fingerprint consists of two items and one fingerprint, so assuming $U$ is finite this lies in $\complexity{1}$. Since there are at most $2n$ vertices in the tree, the interval fingerprints require at most $\complexity{n}$ bits to be communicated.
 
-Overall, the complexity is TODO
+The exchange of interval item sets consists in the worst case of exchanging every item using $\ceil{\frac{n}{t}}$ interval item sets. An interval item set needs to transmit two items to encode the boundaries, as well as the items themselves, which lies in $\complexity{1}$ per interval item set. All interval item sets together thus amount to another $\complexity{n}$, leading to a total of $\complexity{n}$ bits being transmitted in the worst case.
 
-\Cref{fig:worst-bytes} shows a worst-case example, in which the tree of height $h \defeq \mathit{log}_{b}(2 \cdot n_{min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices. 
+\Cref{fig:worst-bytes} shows a worst-case example in which the tree of height $h \defeq \mathit{log}_{b}(2 \cdot n_{min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices. 
+
+TODO bound complexity by difference, also average case?
 
 \begin{figure*}
 $X_0 \defeq \{\examplea, \examplec, \examplee, \exampleg \}$
@@ -509,39 +276,39 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 
 \subsection{Computational Complexity}
 
-TODO (write fingerprint chapter first?)
+We now analyze the computational cost incurred by a single communication round, i.e. computing the response to a message. This includes both fingerprint comparisons as well as locating the items to transmit. We do however assume that an auxiliary data structure is available to help with this computation, e.g. the a fingerprint tree structure presented in \cref{TODO}. We exclude both space usage and maintenance cost for this data structure from the per-round complexity.
+
+We will assume that transferring an item as part of an interval item set requires $\complexity{1}$ time and space. The relevant computational overhead per communication round thus consists of computing $\fp{\interval{x}{y}{X_i}}$ for every received interval fingerprint $\ifp{x}{y}{X_j}$, as well as partitioning $\interval{x}{y}{X_i}$ in case of a mismatch and computing the fingerprints over all subintervals. These computations can be performed independently for all received interval fingerprints, so in particular they can be performed sequentially, reusing space. The overall space complexity of the per-round computations is equal to that of the computations for a single interval fingerprint.
+
+A naive approach is to query the auxiliary data structure for each received interval fingerprint individually. The maximum amount of queries is upper-bounded by $n$, it is certainly impossible to receive more than $n$ interval fingerprints within a single communication round. Unfortunately, the greatest possible number of interval fingerprints within a single round corresponds to the number of leaves in the recursion tree, which is in $\complexity{n}$. The auxiliary data structure requires $\complexity{\mathit{log}(n)}$ time, leading to an overall $\complexity{n \cdot \mathit{log}(n)}$.
+
+We can bring this down to $\complexity{\mathit{log}(n) + n_{\triangle}}$ by augmenting the auxiliary data structure with parent-pointers to allow efficient in-order traversal, and by memoizing some intermediate fingerprint computation results. TODO (write fingerprint chapter first)
 
 \section{Generic Optimizations}
 \label{set-reconciliation-simple-optimizations}
 
-While the simple formulation of the protocol is nicely suitable for a correctness proof, there are some cases that can be handled much more efficiently. We briefly discuss them and then present an optimized version of the protocol.
+We now give a list of optimizations which do not impact the overall complexity analysis, but which do improve on some constant factors.
 
-\subsection{Detecting Singletons}
+\subsection{Non-Uniform Partitions}
 
-When receiving an interval fingerprint $\ifp{x}{y}{X_i}$, a node can check whether $\fp{\{x\}} =  \fp{\interval{x}{y}{X_i}}$. If this is the case, $\mathcal{X}_i$ only stores $x$ within the interval, so $\mathcal{X}_j$ can act as if it received the item $x$ and the interval fingerprint $\ifpmanual{l}{y}{\neutraladd}$ where $l$ is the least element in $X_j$ such that $x \prec l \preceq y$.
+When partitioning an interval into subintervals, the protocol does not specify where exactly to place the boundaries. Splitting into partitions of roughly equal sizes makes a lot of sense if new data could arise anywhere within the linear order with equal probability. Is however the items are likely to fall within certain ranges of the order, it can be more efficient to use more fine-grained partitions within those regions. If for example items are sorted by timestamp, and new items are expected to be propagated to every node in the system within a couple of seconds, then all the items that are older than ten seconds can be confortably lumped together in a large interval.
 
-\subsection{Encodings}
+opts:
 
-A first, simple encoding optimization is to encode empty intervals not via $\neutraladd$, but as a dedicated message part. This allows a more compact representation, which is appropriate since $\neutraladd$ should by far be the most frequently occurring fingerprint. We will designate an \defined{empty interval fingerprint} as $\ifpempty{x}{y}$.
-
-A second optimization that merely changes the encoding of messages consists of a more compact representation of ``adjacent'' intervals: Interval boundaries $[x_0, x_1), [x_1, x_2), \ldots, [x_{k - 1}, x_k)$ can be encoded as a simple list $x_0, x_1, \ldots, x_{k - 1}, x_k$. As long as the protocol only talks about intervals which partition the original interval, expressing $k$ interval boundaries only consumes $1 + k$ space as opposed to the naïve $2k$.
-
-We can in fact do even better: when a node receives some interval $[x, y)$ and splits it into $[x, m)$ and $[m, y)$, it merely needs to send $m$ to the other node. If the other node can reconstruct which interval is being split at point $m$, then all the necessary information has been conveyed. Since any $m$ falls into exactly one previously used interval, there can be no ambiguity. It thus suffices to send triples $( \mathit{fingerprint}_{\prec m}, m, \mathit{fingerprint}_{\succeq m})$. As a consequence, any particular $u \in U$ is transmitted at most one time during a protocol run. This optimization does however come at the cost of nodes needing to store interval boundaries across communication rounds.
-
-\subsection{Branching Degree}
-
-For the correctness of the protocol, large, populated intervals need to be partitioned and then recursively reconciled. It does however neither matter to partition the intervals into exactly two subintervals, nor that the intervals are evenly partitioned in the middle. Increasing the number of subintervals per recursion step reduces the total number of roundtrips at the cost of less efficient bandwidth usage, as will be seen in the complexity analysis in \cref{set-reconciliation-complexity}.
-
-In a similar vein, there is no inherent reason to initiate reconciliation by only sending a single fingerprint for the whole interval of interest, the initiating node and just as well partition the interval of interest and send fingerprints for each subinterval.
-
-Splitting intervals into partitions of unequal sizes can be beneficial if missing items are not expected to be distributed uniformly at random across the whole order. Items might for example be ordered by the time at which they were created, a long-running node would then expect a continuous stream of new items, but would rarely receive an unknown item from the far past. Interval selection could reflect this by e.g. partitioning the $\frac{1}{2}$ oldest items into the first subinterval, then the next $\frac{1}{4}$ into the second subinterval, the next $\frac{1}{8}$ into the third, and so on. If unknown old items are rare enough, the average size of intervals which require recursion is less than under a split into intervals of equal sizes.
+- non-uniform splits
+- superset rather than equality
+- utilize lower boundary
+- ecoding tricks
+  - omit adjacent boundaries
+  - merge adjacent intervals
+  -  item sets without boundaries?
 
 %\subsection{Utilizing Interval Boundaries}
 %\label{utilizing-boundaries}
 %
 %The next two optimizations stem from the fact that roughly half of all intervals include their lower boundary. When a node receives an interval fingerprint starting at some $x \in U$ and knows that the other node holds that $x$, it can simply add $x$ to its own set and $x$ can be excluded from any further reconciliation effort.
 %
-%An optimization that can be applied independent of $U$ and $\preceq$ is to introduce \defined{lower singleton intervals}, ranging from $x$ to $y$ and containing no item but $x$, denoted as $\ifpsingle{x}{y}$. When $\mathcal{X}_i$ receives a lower singleton interval $\ifpsingle{x}{y}$, it can reply with all items $u$ such that $x \prec u \prec y$. If $x \notin X_i$, it adds it to the set, otherwise no further action is necessary. This optimization shaves off one communication round in \cref{two-singletons} because $\mathcal{X}_1$ responds with $\ifpsingle{u1}{y}$ rather than $\ifpmanual{u_1}{y}{\fp{u_1}}$, thus finishing reconciliation in at most one more communication round.
+%An optimization that can be applied independent of $U$ and $\preceq$ is to introduce \defined{lower singleton intervals}, ranging from $x$ to $y$ and containing no item but $x$, denoted as $\ifpsingle{x}{y}$. When $\mathcal{X}_i$ receives a lower singleton interval $\ifpsingle{x}{y}$, it can reply with all items $u$ such that $x \prec u \prec y$. If $x \notin X_i$, it adds it to the set, otherwise no further action is necessary. This optimization shaves off one communication round in \cref{two-singletons} because $\mathcal{X}_1$ responds with $\ifpsingle{u1}{y}$ rather than $\ifpmanual{u_1}{y}{\fp{u_1}}$, thus finishing reconciliation in at most one more communication round.00
 %
 %In order to efficiently leverage the knowledge that some interval of size at least two contains its lower boundary, $\preceq$ must be antidense:
 %
@@ -567,4 +334,4 @@ Splitting intervals into partitions of unequal sizes can be beneficial if missin
 %The interval boundaries do not necessarily have to be only the hashes of the items, additional information can be added so that the order on the boundaries exhibit similarity with some order on the items. Hashing has to be involved though in order to map the infinite universe to a finite set of boundaries with a low probability of collisions.
 
 \section{Reconciling Hash Graphs}
-\label{set-reconciliation-simple-graphs}
+\label{set-reconciliation-graphs}
