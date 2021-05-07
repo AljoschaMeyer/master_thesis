@@ -284,54 +284,39 @@ A naive approach is to query the auxiliary data structure for each received inte
 
 We can bring this down to $\complexity{\mathit{log}(n) + n_{\triangle}}$ by augmenting the auxiliary data structure with parent-pointers to allow efficient in-order traversal, and by memoizing some intermediate fingerprint computation results. TODO (write fingerprint chapter first)
 
-\section{Generic Optimizations}
+\section{Smaller Optimizations}
 \label{set-reconciliation-simple-optimizations}
 
 We now give a list of optimizations which do not impact the overall complexity analysis, but which do improve on some constant factors.
 
 \subsection{Non-Uniform Partitions}
 
-When partitioning an interval into subintervals, the protocol does not specify where exactly to place the boundaries. Splitting into partitions of roughly equal sizes makes a lot of sense if new data could arise anywhere within the linear order with equal probability. Is however the items are likely to fall within certain ranges of the order, it can be more efficient to use more fine-grained partitions within those regions. If for example items are sorted by timestamp, and new items are expected to be propagated to every node in the system within a couple of seconds, then all the items that are older than ten seconds can be confortably lumped together in a large interval.
+When partitioning an interval into subintervals, the protocol does not specify where exactly to place the boundaries. Splitting into partitions of roughly equal sizes makes a lot of sense if new data could arise anywhere within the linear order with equal probability. Is however the items are likely to fall within certain ranges of the order, it can be more efficient to use more fine-grained partitions within those regions. If for example items are sorted by timestamp, and new items are expected to be propagated to every node in the system within a couple of seconds, then all items older than ten seconds can be comfortably lumped together in a large interval.
 
-opts:
+\subsection{Subset Checks}
 
-- non-uniform splits
-- superset rather than equality
-- utilize lower boundary
-- ecoding tricks
-  - omit adjacent boundaries
-  - merge adjacent intervals
-  -  item sets without boundaries?
+When a node $\mathcal{X}_i$ receives an interval fingerprint $\ifp{x}{y}{X_j}$, it might have a different fingerprint for that interval, but one of the resulting subintervals could match the received fingerprint. The node can then ignore that interval, transmitting only the remaining ones.
 
-%\subsection{Utilizing Interval Boundaries}
-%\label{utilizing-boundaries}
-%
-%The next two optimizations stem from the fact that roughly half of all intervals include their lower boundary. When a node receives an interval fingerprint starting at some $x \in U$ and knows that the other node holds that $x$, it can simply add $x$ to its own set and $x$ can be excluded from any further reconciliation effort.
-%
-%An optimization that can be applied independent of $U$ and $\preceq$ is to introduce \defined{lower singleton intervals}, ranging from $x$ to $y$ and containing no item but $x$, denoted as $\ifpsingle{x}{y}$. When $\mathcal{X}_i$ receives a lower singleton interval $\ifpsingle{x}{y}$, it can reply with all items $u$ such that $x \prec u \prec y$. If $x \notin X_i$, it adds it to the set, otherwise no further action is necessary. This optimization shaves off one communication round in \cref{two-singletons} because $\mathcal{X}_1$ responds with $\ifpsingle{u1}{y}$ rather than $\ifpmanual{u_1}{y}{\fp{u_1}}$, thus finishing reconciliation in at most one more communication round.00
-%
-%In order to efficiently leverage the knowledge that some interval of size at least two contains its lower boundary, $\preceq$ must be antidense:
-%
-%\begin{definition}
-%Let $U$ be a set and $\preceq$ be a linear order on $u$. We call $\preceq$ \defined{antidense} if for all $x \in U$, if there exists $y \in U$ such that $x \prec y$, then there exists a least such element, denoted as $\successor{x}$.
-%\end{definition}
-%
-%If $\preceq$ is antidense, we can introduce \defined{least-containing intervals}, ranging from $x$ to $y$ and guaranteed to contain $x$ and some other items whose fingerprint is $f$, denoted $\ifpcontain{x}{y}{f}$ (this is just a notation, $\fp{x}$ does not have to be transmitted). A node receiving a least-containing interval $\ifpcontain{x}{y}{f}$ reacts as if it received the item $x$ and the regular interval fingerprint $\ifpmanual{\successor{x}}{y}{f}$. Furthermore, whenever $\mathcal{X}_i$ sends a regular interval fingerprint $\ifp{x}{y}{X_i}$ and then receives a regular interval fingerprint $\ifp{x}{m}{X_j}$, neither node has item $x$, so $\mathcal{X}_i$ can act as if it received $\ifp{\successor{x}}{y}{X_j}$ instead.
-%In both of these cases, if $\successor{x}$ is not defined, i.e. $x$ is the maximal element of the order, the notes merely act as if they just reconciled $x$ and do not perform any further work.
-%
-%This approach explicitly adds a single bit of information to each interval, namely whether the lower boundary is contained or not. A different approach is to implicitly distinguish between intervals that definitely contain the lower boundary, i.e. the greater of the two intervals obtained after a split, and intervals that may or may not contain their lower boundary, i.e. all other intervals. In this setting, sending and receiving a regular interval with the same lower boundary does not imply that the other node does not hold that item.
-%
-%Utilizing this information can even be done for universes with a non-antidense order, by introducing intervals which exclude both their boundaries: $\intervalx{x}{y}{A} \defeq \{a \in A | x \prec a \prec y\}$. When a node receives an interval $\interval{m}{y}{X_i}$ which is a greater interval obtained from a split, it reacts as if it received the item $x$ and the fingerprint over the interval $\ifpmanual{m}{y}{\intervalx{m}{y}{X_i}}$.
-%
-%\subsection{Bounded Boundaries}
-%
-%The boundaries of intervals come from the universe $U$ and need to be transmitted. If $U$ contains arbitrarily large elements, e.g. $U \defeq \{0, 1\}^{\ast}$, the protocol cannot uphold any reasonable complexity guarantees. The solution is to employ indirection, for example by hashing the items from $U$ and then comparing the hashes lexicographically rather than using any order on $U$. After the protocol has terminated, each node holds the hashes of the items it is missing.
-%
-%As a last phase, the nodes can then exchange those lists of hashes and answer with the items thus requested by the other node. Alternatively, the items could be retrieved from some content-addressable storage substrate. Both of these solutions add additional roundtrips to the reconciliation. A more efficient solution is to make the protocol aware of the difference between the hashes being used for interval delimiting and the actual items of interest. Whenever the protocol determines that an item needs to be transmitted, the node transmits the actual item rather than the hash.
-%
-%If the protocol is made aware of the difference and inlines items, most of the optimizations from \cref{utilizing-boundaries} become inapplicable, since knowing that the other node holds an item hashing to some lower boundary of an interval is not the same as obtaining that item. The only optimization in the same spirit that can be applied as the following: if a node $\mathcal{X}_i$ receives an interval fingerprint $\ifpmanual{m}{y}{\fp{m}}$, it can act as if it received an interval containing only $m$ and it additionally sends all items in $\intervalx{m}{y}{X_i}$.
-%
-%The interval boundaries do not necessarily have to be only the hashes of the items, additional information can be added so that the order on the boundaries exhibit similarity with some order on the items. Hashing has to be involved though in order to map the infinite universe to a finite set of boundaries with a low probability of collisions.
+This scenario is a special case of receiving the fingerprint of a subset of the item one holds within an interval. In principle, a node can compute the fingerprints of arbitrary subsets of its interval, trying to find a match. If a match is found, the node knows that it holds a superset of the items the other node holds within the interval. The protocol could be extended with a message part that transmits items and does not warrant a response, this would be used to transmit $\interval{x}{y}{X_i} \setminus \interval{x}{y}{X_j}$.
+
+Computing the fingerprint of all subsets of interval is infeasible since they are $2^n$ many subsets. As discussed in \cref{TODO} however, if the group operation for fingerprint computation is xor, a node can check whether the fingerprint of a subset of items matches a given fingerprint in $\complexity{n^3}$.
+Assuming no fingerprint collisions occurred, checking whether a subset of $\interval{x}{y}{X_i}$ matches $\fp{\interval{x}{y}{X_j}}$ is equivalent to checking whether $\interval{x}{y}{X_i}$ is a superset of $\interval{x}{y}{X_j}$.
+
+This leads to a protocol with a per-round computational complexity of $\complexity{n^3}$ and the same worst-case guarantees, but which needs to recurse less often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
+
+TODO compare with the characteristic polynomial approach
+
+\subsection{Efficiently Encoding Intervals}
+
+A naive encoding of interval fingerprints and interval item sets would transmit both boundaries of every interval, transmitting $2n$ items if there are $n$ intervals in a message. This can be brought down to $1 + n$ by utilizing that the lower boundary of all but the first interval it is also the upper boundary of the preceding one. An efficiently encoded message consists of the number of intervals it contains, followed by the lowereboundary of the first interval, followed by pairs of interval information and the upper boundary of the interval that the information pertains to, where each \defined{interval information} is either a fingerprint, a set of items, or a dummy value signaling that this part of the overall interval is already fully synchronized.
+
+Note additionally that two adjacent interval item sets can be merged into a single one, saving on the transmission of the boundary between them.
+
+\subsection{Utilizing Interval Boundaries}
+
+Whenever the lower boundary of an interval is transmitted, an item is transmitted. If the receiving node knew whether the other node held this item, it would automatically be reconciled and could be excluded from further recursion steps. One way for achieving this is to tag each interval with a bit to indicate whether the lower boundary is being held by the sender. A different approach is to require that intervals are only split at items which the splitting node holds, this way no explicit bits needs to be transmitted, yet many boundaries can be identified as being held by the other node.
+
+Recall that we assume $U$ to be finite and with the greatest element $\top$, which never occurs as the lower boundary of an interval. For $x \in U \setminus \{\top\}$ we can thus denote by $\successor{x}$ the unique $z \in U$ such that $x \prec z$ and there exists no $y \in U$ such that $x \prec y \prec z$. Upon sending or receiving an interval from $x$ to $y$ for which both nodes know that the sending node holds $x$, the receiving node adds $x$ to its set of items, and then both nodes proceed as if the interval went from $\successor{x}$ to $y$.
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-graphs}
