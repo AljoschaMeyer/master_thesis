@@ -1,62 +1,5 @@
 % !TEX root = ../main.tex
 
-\newcommand{\examplefp}[1]{#1}
-\newcommand{\fpa}[0]{\examplefp{144}}
-\newcommand{\fpb}[0]{\examplefp{194}}
-\newcommand{\fpc}[0]{\examplefp{240}}
-\newcommand{\fpd}[0]{\examplefp{245}}
-\newcommand{\fpe}[0]{\examplefp{76}}
-\newcommand{\fpf}[0]{\examplefp{221}}
-\newcommand{\fpg}[0]{\examplefp{224}}
-\newcommand{\fph}[0]{\examplefp{65}}
-\newcommand{\fpcd}[0]{\examplefp{229}}
-\newcommand{\fpacd}[0]{\examplefp{117}}
-\newcommand{\fpefgh}[0]{\examplefp{74}}
-\newcommand{\fpbcdh}[0]{\examplefp{232}}
-\newcommand{\fpzero}[0]{\examplefp{0}}
-
-\newcommand{\examplea}[0]{a}
-\newcommand{\exampleb}[0]{b}
-\newcommand{\examplec}[0]{c}
-\newcommand{\exampled}[0]{d}
-\newcommand{\examplee}[0]{e}
-\newcommand{\examplef}[0]{f}
-\newcommand{\exampleg}[0]{g}
-\newcommand{\exampleh}[0]{h}
-\newcommand{\examplei}[0]{i}
-
-\newcommand{\examplefpi}[3]{
-  $\ifpmanual{#1}{#2}{\fp{#3}}$
-}
-\newcommand{\exampleiis}[3]{
-\begin{tabular}{ c | c  | c }
-{#1} & {#3} & {#2} \\ 
-\end{tabular}
-}
-
-\tikzset{
-fpi/.style={
-  align=left,
-  draw=black,
-  fill=white
-  }
-}
-
-\tikzset{
-iis/.style={
-  align=left,
-  draw=black,
-  fill=white
-  }
-}
-
-\tikzset{
-local/.style={
-  }
-}
-
-\tikzstyle{edge} = [draw,thick,opacity=0.25]
-
 In this chapter, we consider the set reconciliation protocol sketched in the introduction in greater detail.
 We define the protocol in \cref{set-reconciliation-def}, prove its correctness in \cref{set-reconciliation-simple-correct}, and do a complexity analysis in \cref{set-reconciliation-complexity}.  \Cref{set-reconciliation-simple-optimizations} lists some optimizations which do not change the asymptotic complexity but which avoid some unnecessary work. We conclude the chapter with an example application in \cref{set-reconciliation-graphs}, briefly describing how the protocol can be applied to the synchronization of the hash graphs that arise e.g. in the context of distributed version control systems such as git~\cite{chacon2014pro}.
 
@@ -65,26 +8,81 @@ We define the protocol in \cref{set-reconciliation-def}, prove its correctness i
 
 The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
 $\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{interval item set}.
-An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a triple $\iis{x}{y}{S}$ for $x, y \in U, S \subseteq \interval{x}{y}{X_i}$.
+An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a four-tuple $\iis{x}{y}{S}{b}$ for $x, y \in U, S \subseteq \interval{x}{y}{X_i}, b \in \{0, 1\}$. $b$ indicates whether the interval item set is a response to a previous interval item set.
 
 Recall that $\fp{A}$ denotes the fingerprint for $A \subseteq U$, and that $\interval{x}{y}{A} \defeq \{a \in A | x \preceq a \prec y\}$.
 
 When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
 
 \begin{itemize}
-  \item For every interval item set \iis{x}{y}{S} in the message, all items in $S$ are added to the locally stored set $X_i$. The node then adds the interval item set $\iis{x}{y}{\interval{x}{y}{X_i} \setminus S}$ to the response, unless $\interval{x}{y}{X_i} \setminus S = \emptyset$.
+  \item For every interval item set $\iis{x}{y}{S}{b}$ in the message, all items in $S$ are added to the locally stored set $X_i$. If $b = 0$, the node then adds the interval item set $\iis{x}{y}{\interval{x}{y}{X_i} \setminus S}{1}$ to the response, unless $\interval{x}{y}{X_i} \setminus S = \emptyset$.
   \item For every interval fingerprint $\ifp{x}{y}{X_j}$ in the message, it does one of following:
     \begin{caselist}
       \case[Equal Fingerprints] \label{def-fingerprint-eq} If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, nothing happens.
-      \case[Recursion Anchor] \label{def-recursion-anchor} The node may add the interval item set $\iisnatural{x}{y}{X_i}$ to the response. If $\abs{\interval{x}{y}{X_j}} \leq 1$, it must do so.
-      \case[Recurse] \label{def-recurse} Otherwise, the node selects $m_0 = x \prec m_1 \prec \ldots \prec m_k = y \in U$, $k \geq 2$ such that among all $\interval{m_0}{m_1}{X_i}$ for  $0 \leq l < k$ at least two intervals are non-empty. For all $0 \leq l < k$ it adds either the interval fingerprint $\ifp{m_l}{m_{l + 1}}{X_i}$ or the interval item set $\iisnatural{m_l}{m_{l + 1}}{X_i}$ to the response.
+      \case[Recursion Anchor] \label{def-recursion-anchor} The node may add the interval item set $\iisnatural{x}{y}{X_i}{0}$ to the response. If $\abs{\interval{x}{y}{X_j}} \leq 1$, it must do so.
+      \case[Recurse] \label{def-recurse} Otherwise, the node selects $m_0 = x \prec m_1 \prec \ldots \prec m_k = y \in U$, $k \geq 2$ such that among all $\interval{m_0}{m_1}{X_i}$ for  $0 \leq l < k$ at least two intervals are non-empty. For all $0 \leq l < k$ it adds either the interval fingerprint $\ifp{m_l}{m_{l + 1}}{X_i}$ or the interval item set $\iisnatural{m_l}{m_{l + 1}}{X_i}{0}$ to the response.
     \end{caselist}
   \item If the accumulated response is nonempty, it is sent to the other node. Otherwise, the protocol has terminated successfully.
 \end{itemize}
 
 To initiate reconciliation of an interval $[x, y)$, a node $\mathcal{X}_i$ sends a message containing solely the interval fingerprint $\ifp{x}{y}{X_i}$.
 
-\Cref{simple-set-reconciliation-example} gives an example run of the protocol. TODO
+\Cref{simple-set-reconciliation-example} gives an example run of the protocol.
+
+\begin{figure*}
+$X_0 \defeq \{\exampleb, \examplec, \exampled, \examplee, \examplef, \exampleh \}$
+\hfill
+$X_1 \defeq \{\examplea, \examplee, \examplef, \exampleg\}$
+
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale, font=\tiny]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\examplea, \examplee, \examplef, \exampleg\}}};
+
+		\node (v00) at (-4, -0) [fpi] {\examplefpi{\examplea}{\examplee}{\{\exampleb, \examplec, \exampled\}}};
+		\node (v01) at (4, -0) [fpi] {\examplefpi{\examplee}{\examplei}{\{\examplee, \examplef, \exampleh\}}};
+
+                \node (v10) at (-4, -1) [iis] {\exampleiis{\examplea}{\examplee}{\{\examplea\}}{0}};
+                \node (v11) at (2, -1) [fpi] {\examplefpi{\examplee}{\exampleg}{\{\examplee, \examplef\}}};
+                \node (v12) at (6, -1) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleg\}}{0}};
+
+                \node (v20) at (-4, -2) [iis] {\exampleiis{\examplea}{\examplee}{\{\exampleb, \examplec, \exampled\}}{1}};
+                \node (v21) at (6, -2) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleh\}}{1}};
+		%edges
+                \draw (vroot) edge[edge] (v00);
+                \draw (vroot) edge[edge] (v01);
+
+		\draw (v00) edge[edge] (v10);
+		\draw (v01) edge[edge] (v11);
+		\draw (v01) edge[edge] (v12);
+
+		\draw (v10) edge[edge] (v20);
+		\draw (v12) edge[edge] (v21);
+	\end{pgfonlayer}
+	
+	\begin{pgfonlayer}{background}
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -1) -- (-8, -1);
+		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -2) -- (8, -2);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\caption{
+An example run of the protocol. $\mathcal{X}_1$ initiates reconciliation for all items between \examplea~ and \examplei (ordered alphabetically) by sending its fingerprint for the whole interval.
+Upon receiving this interval fingerprint, $\mathcal{X}_0$ locally computes $\fp{\interval{\examplea}{\examplei}{X_0}}$. Since the result does not match the received interval, $\mathcal{X}_0$ splits $X_0$ into two parts of equal size and transmits interval fingerprints for these subintervals.
+In the third round, $\mathcal{X}_1$ locally computes fingerprints for the two received intervals, but neither matches. $\abs{\interval{\examplea}{\examplee}{X_1}} \leq 1$, so $\mathcal{X}_1$ transmits the corresponding interval items set, i.e. $\iis{\examplea}{\examplee}{\examplea}{0}$. $\abs{\interval{\examplee}{\examplei}{X_1}} > 1$, so another recursion step is performed. After splitting the interval, the lower interval is large enough to send its fingerprint, the upper one however only contains one item and thus results in another interval item set.
+In the fourth and final communication round, $\mathcal{X}_0$ receives two interval item sets and answers with the items it holds within those intervals. When it receives the interval fingerprint $\ifp{\examplee}{\exampleg}{X_1}$, it computes an equal fingerprint for $\ifp{\examplee}{\exampleg}{X_0}$, so no further action is required for this particular interval. TODO prettify this caption
+}
+
+\label{simple-set-reconciliation-example}
+\end{figure*}
 
 \subsection{Observations}
 
@@ -94,7 +92,7 @@ If the universe $U$ is finite, the greatest element of the universe cannot be ex
 
 If the universe $U$ is not finite, then there are items that require an arbitrary amount of bytes to encode. Since the protocol needs to transmit items to denote interval boundaries, no reasonably complexity guarantees can be given for infinite universes. We will thus assume $U$ to be finite and small enough that items can be reasonably encoded. This assumption is not very restrictive in practice because nodes can always synchronize hashes of items rather than the items themselves. The protocol can then be either followed by a phase where hashes of interest are transferred and anwered by the actual items, or the protocol can be made aware of the distinction and use hashes as interval boundaries while transmitting actual items for interval item sets.
 
-When reconciling hashes in place of actual items, any semantically interesting order on the items would be replaced by an arbitrary order on the hashes. But rather than using just the hashes as interval boundaries, one can just as well add additional information. For example if the universe of interest consists of timestamped strings of arbitrary length, the interval boundaries can consist of timestamped hashes, ordered by timestamp first and using the numeric order on the hashes as a tiebreaker. \Cref{set-reconciliation-graphs} gives a more detailed example for utilizing this technique.
+When reconciling hashes in place of actual items, any semantically interesting order on the items would be replaced by an arbitrary order on the hashes. But rather than using only's the hashes as interval boundaries, one can just as well add additional information. For example if the universe of interest consists of timestamped strings of arbitrary length, the interval boundaries can consist of timestamped hashes, ordered by timestamp first and using the numeric order on the hashes as a tiebreaker. \Cref{set-reconciliation-graphs} gives a more detailed example for utilizing this technique.
 
 \section{Proof of Correctness}
 \label{set-reconciliation-simple-correct}
@@ -104,14 +102,14 @@ When reconciling hashes in place of actual items, any semantically interesting o
 We now prove the correctness of the protocol. The protocol is correct if for all $x, y \in U$ both nodes eventually hold $\interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ after a node $\mathcal{X}_i$ has received a message pertaining to the interval $[x, y)$.
 
 \begin{caselist}
-\case[Interval Item Set] \label{case-iis}  If the message contains the interval item set $\iisnatural{x}{y}{X_j}$, then $\mathcal{X}_i$ adds all items to its set, resulting in $\interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ as desired. The other node then receives $\iis{x}{y}{\interval{x}{y}{X_i} \setminus \iisnatural{x}{y}{X_j}}$, ending up with $\interval{x}{y}{X_j} \cup (\iis{x}{y}{\interval{x}{y}{X_i} \setminus \iisnatural{x}{y}{X_j}}) = \interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ as desired.
+\case[Interval Item Set] \label{case-iis}  If the message contains the interval item set $\iisnatural{x}{y}{X_j}{0}$, then $\mathcal{X}_i$ adds all items to its set, resulting in $\interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ as desired. $\mathcal{X}_j$ then receives $\iis{x}{y}{\interval{x}{y}{X_i} \setminus \interval{x}{y}{X_j}}{1}$, ending up with $\interval{x}{y}{X_j} \cup (\interval{x}{y}{X_i} \setminus \interval{x}{y}{X_j}) = \interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ as desired.
 
 \case[Interval Fingerprint] \label{case-ifp} Otherwise, the message contains an interval fingerprint $\ifp{x}{y}{X_j}$.
 
 \begin{caselist}
 \case[Equal Fingerprints] If $\fp{\interval{x}{y}{X_j}} = \fp{\interval{x}{y}{X_i}}$, the protocol terminates immediately and no changes are performed by any node. Assuming no fingerprint collision occurred, $\interval{x}{y}{X_i} = \interval{x}{y}{X_j} = \interval{x}{y}{X_i} \cup \interval{x}{y}{X_j}$ as desired.
 
-\case[Recursion Anchor] \label{case-ifp-anchor} If $\mathcal{X}_i$ adds the interval item set $\iisnatural{x}{y}{X_i}$, then \cref{case-iis} applies when the other node receives the response, with the roles reversed.
+\case[Recursion Anchor] \label{case-ifp-anchor} If $\mathcal{X}_i$ adds the interval item set $\iisnatural{x}{y}{X_i}{0}$, then \cref{case-iis} applies when the other node receives the response, with the roles reversed.
 
 \case[Recurse] Let $\intcount{i} \defeq \abs{\interval{x}{y}{X_i}}$ and $\intcount{j} \defeq \abs{\interval{x}{y}{X_j}}$. $\intcount{j} \geq 2$, since otherwise $\mathcal{X}_j$ would have sent an item set for the interval. Similarly, $\intcount{i} \geq 2$, since we are not in \cref{case-ifp-anchor}. Thus, $\intcount{i} + \intcount{j} \geq 4$, and the protocol has already been proven correct for all cases where $\intcount{i} + \intcount{j} < 4$. 
 
@@ -134,7 +132,7 @@ Because we want to analyze not only the worst-case complexity but also the compl
 
 \subsection{Preliminary Observations}
 
-A helpful observation for the following analysis is that the interval fingerprints that are being exchanged during a protocol run form a rooted tree where every vertex has at most $b$ children. When a leaf of the tree is reached, an exchange of interval item sets follows. Equal fingerprints can also cut the tree short, but for the following worst-case analysis we will assume this does not occur.
+A helpful observation for the following analysis is that the interval fingerprints that are being exchanged during a protocol run form a rooted tree where every vertex has at most $b$ children. When a leaf of the tree is reached, an exchange of interval item sets follows. Equal fingerprints can also cut the tree short, but for the following worst-case analyses we will assume this does not occur.
 
 Node $\mathcal{X}_i$ can branch at most $\ceil{\mathit{log}_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$. The number of vertices of such a complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{min} \leq 2n \in \complexity{n}$.
 
@@ -165,9 +163,9 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
                 \node (v10) at (2, -1) [fpi] {\examplefpi{\examplee}{\exampleg}{\{\examplee, \examplef\}}};
                 \node (v11) at (6, -1) [fpi] {\examplefpi{\exampleg}{\examplei}{\{\exampleg, \exampleh\}}};
 
-                \node (v20) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}};
+                \node (v20) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}{0}};
 
-                \node (v30) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}};
+                \node (v30) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}{1}};
 
 		%edges
                 \draw (vroot) edge[edge] (v00);
@@ -205,7 +203,7 @@ The exchange of interval item sets consists in the worst case of exchanging ever
 
 \Cref{fig:worst-bytes} shows a worst-case example in which the tree of height $h \defeq \mathit{log}_{b}(2 \cdot n_{min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices. 
 
-TODO bound complexity by difference, also average case?
+TODO bound complexity by difference, also average case
 
 \begin{figure*}
 $X_0 \defeq \{\examplea, \examplec, \examplee, \exampleg \}$
@@ -230,15 +228,15 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
                 \node (v12) at (2, -1) [fpi] {\examplefpi{\examplee}{\exampleg}{\{\examplee, \examplef\}}};
                 \node (v13) at (6, -1) [fpi] {\examplefpi{\exampleg}{\examplei}{\{\exampleg, \exampleh\}}};
 
-                \node (v20) at (-6, -2) [iis] {\exampleiis{\examplea}{\examplec}{\{\examplea\}}};
-                \node (v21) at (-2, -2) [iis] {\exampleiis{\examplec}{\examplee}{\{\examplec\}}};
-                \node (v22) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}};
-                \node (v23) at (6, -2) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleg\}}};
+                \node (v20) at (-6, -2) [iis] {\exampleiis{\examplea}{\examplec}{\{\examplea\}}{0}};
+                \node (v21) at (-2, -2) [iis] {\exampleiis{\examplec}{\examplee}{\{\examplec\}}{0}};
+                \node (v22) at (2, -2) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplee\}}{0}};
+                \node (v23) at (6, -2) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleg\}}{0}};
 
-                \node (v30) at (-6, -3) [iis] {\exampleiis{\examplea}{\examplec}{\{\exampleb\}}};
-                \node (v31) at (-2, -3) [iis] {\exampleiis{\examplec}{\examplee}{\{\exampled\}}};
-                \node (v32) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}};
-                \node (v33) at (6, -3) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleh\}}};
+                \node (v30) at (-6, -3) [iis] {\exampleiis{\examplea}{\examplec}{\{\exampleb\}}{1}};
+                \node (v31) at (-2, -3) [iis] {\exampleiis{\examplec}{\examplee}{\{\exampled\}}{1}};
+                \node (v32) at (2, -3) [iis] {\exampleiis{\examplee}{\exampleg}{\{\examplef\}}{1}};
+                \node (v33) at (6, -3) [iis] {\exampleiis{\exampleg}{\examplei}{\{\exampleh\}}{1}};
 		%edges
                 \draw (vroot) edge[edge] (v00);
                 \draw (vroot) edge[edge] (v01);
@@ -304,6 +302,9 @@ Assuming no fingerprint collisions occurred, checking whether a subset of $\inte
 
 This leads to a protocol with a per-round computational complexity of $\complexity{n^3}$ and the same worst-case guarantees, but which can skip recursive steps more often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
 
+TODO precomputation, see comment %https://piazza.com/class_profile/get_resource/jl30kcwntnn7f1/jlh5nh8gwuh11s
+TODO: this is O(1), not polynomial?
+
 \subsection{Efficiently Encoding Intervals}
 
 A naive encoding of interval fingerprints and interval item sets would transmit both boundaries of every interval, transmitting $2n$ items if there are $n$ intervals in a message. This can be brought down to $1 + n$ by utilizing that the lower boundary of all but the first interval it is also the upper boundary of the preceding one. An efficiently encoded message consists of the number of intervals it contains, followed by the lower boundary of the first interval, followed by pairs of interval information and the upper boundary of the interval that the information pertains to, where each \defined{interval information} is either a fingerprint, a set of items, or a dummy value signaling that this part of the overall interval is already fully synchronized.
@@ -315,6 +316,14 @@ Note additionally that two adjacent interval item sets can be merged into a sing
 Whenever the lower boundary of an interval is transmitted, an item is transmitted. If the receiving node knew whether the other node held this item, it would automatically be reconciled and could be excluded from further recursion steps. One way for achieving this is to tag each interval with a bit to indicate whether the lower boundary is being held by the sender. A different approach is to require that intervals are only split at items which the splitting node holds, this way no explicit bits needs to be transmitted, yet many boundaries can be identified as being held by the other node.
 
 Recall that we assume $U$ to be finite and with the greatest element $\top$, which never occurs as the lower boundary of an interval. For $x \in U \setminus \{\top\}$ we can thus denote by $\successor{x}$ the unique $z \in U$ such that $x \prec z$ and there exists no $y \in U$ such that $x \prec y \prec z$. When sending or receiving an interval from $x$ to $y$ for which both nodes know that the sending node holds $x$, both nodes act as if the interval went from $\successor{x}$ to $y$, except that the receiving node adds $x$ to its local set of items.
+
+\section{Multi-Level Fingerprints}
+
+Since the protocol interprets equal interval fingerprints as both notes holding the same set of items within the interval but never verifies this merely probabilistic assumption, fingerprints need to be long enough to guarantee low collision probability. The longer the fingerprints, the more bits need to be transmitted however. One can use smaller fingerprints if in case of equal fingerprints the nodes then exchange a more secure fingerprint rather than immediately stopping the recursion for this interval.
+
+Compared to the protocol version with only a single, long fingerprint, the auxiliary data structure needs to store an additional, small fingerprint per vertex. Whenever a node receives a first-level interval fingerprint that is equal to its own, it answers with the longer second-level fingerprint for the same interval. When a node receives a second-level interval fingerprint that is equal to its own, it terminates the recursion. If it is not equal, it recurses as usual, in particular it sends first-level fingerprints for any large subintervals.
+
+This scheme can of course be extended to an arbitrary number of fingerprint levels. Every level increases the worst-case number of roundtrips by one, but decreases the average message size. If cryptographically secure fingerprints are desired, low levels of the fingerprint hierarchy do not have to be secure, only the top level fingerprint needs to be so.
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-graphs}

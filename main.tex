@@ -24,11 +24,111 @@
 \usetikzlibrary{arrows.meta}
 \usetikzlibrary{shapes}
 
+\usepackage{minted}
+
 \title{
 {Efficient Synchronization of Recursively Partitionable Data Structures}\\
 {\large Technische Universität Berlin}
 }
 \author{Aljoscha Meyer}
+
+
+
+
+\newcommand{\examplefp}[1]{#1}
+\newcommand{\fpa}[0]{\examplefp{144}}
+\newcommand{\fpb}[0]{\examplefp{194}}
+\newcommand{\fpc}[0]{\examplefp{240}}
+\newcommand{\fpd}[0]{\examplefp{245}}
+\newcommand{\fpe}[0]{\examplefp{76}}
+\newcommand{\fpf}[0]{\examplefp{221}}
+\newcommand{\fpg}[0]{\examplefp{224}}
+\newcommand{\fph}[0]{\examplefp{65}}
+\newcommand{\fpcd}[0]{\examplefp{229}}
+\newcommand{\fpacd}[0]{\examplefp{117}}
+\newcommand{\fpefgh}[0]{\examplefp{74}}
+\newcommand{\fpbcdh}[0]{\examplefp{232}}
+\newcommand{\fpzero}[0]{\examplefp{0}}
+
+%\newcommand{\examplea}[0]{a}
+%\newcommand{\exampleb}[0]{b}
+%\newcommand{\examplec}[0]{c}
+%\newcommand{\exampled}[0]{d}
+%\newcommand{\examplee}[0]{e}
+%\newcommand{\examplef}[0]{f}
+%\newcommand{\exampleg}[0]{g}
+%\newcommand{\exampleh}[0]{h}
+\newcommand{\examplea}[0]{\ensuremath{\mathrm{ape}}}
+\newcommand{\exampleb}[0]{\ensuremath{\mathrm{bee}}}
+\newcommand{\examplec}[0]{\ensuremath{\mathrm{cat}}}
+\newcommand{\exampled}[0]{\ensuremath{\mathrm{doe}}}
+\newcommand{\examplee}[0]{\ensuremath{\mathrm{eel}}}
+\newcommand{\examplef}[0]{\ensuremath{\mathrm{fox}}}
+\newcommand{\exampleg}[0]{\ensuremath{\mathrm{gnu}}}
+\newcommand{\exampleh}[0]{\ensuremath{\mathrm{hog}}}
+\newcommand{\examplei}[0]{\ensuremath{\top}}
+
+\newcommand{\hexamplea}[0]{\ensuremath{\h(\mathrm{ape}})}
+\newcommand{\hexampleb}[0]{\ensuremath{\h(\mathrm{bee}})}
+\newcommand{\hexamplec}[0]{\ensuremath{\h(\mathrm{cat}})}
+\newcommand{\hexampled}[0]{\ensuremath{\h(\mathrm{doe}})}
+\newcommand{\hexamplee}[0]{\ensuremath{\h(\mathrm{eel}})}
+\newcommand{\hexamplef}[0]{\ensuremath{\h(\mathrm{fox}})}
+\newcommand{\hexampleg}[0]{\ensuremath{\h(\mathrm{gnu}})}
+\newcommand{\hexampleh}[0]{\ensuremath{\h(\mathrm{hog}})}
+
+\newcommand{\aux}[2]{
+\begin{tabular}{ c }
+{#1} \\ 
+\hline
+${#2}$
+\end{tabular}
+}
+
+\tikzset{
+aux/.style={
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\newcommand{\examplefpi}[3]{
+  $\ifpmanual{#1}{#2}{\fp{#3}}$
+}
+\newcommand{\exampleiis}[4]{
+\begin{tabular}{ c | c  | c }
+{#1} & {#3} & {#2} \\ 
+\end{tabular} $_{(#4)}$
+}
+
+\tikzset{
+fpi/.style={
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzset{
+iis/.style={
+  align=left,
+  draw=black,
+  fill=white
+  }
+}
+
+\tikzset{
+local/.style={
+  }
+}
+
+\tikzstyle{edge} = [draw,thick,opacity=0.25]
+
+
+
+
+
 
 \begin{document}
 \maketitle
@@ -48,10 +148,6 @@
 \chapter{Set Reconciliation}
 \label{basic-set-reconciliation}
 \input{chapters/basic_set_reconciliation}
-
-\chapter{Bounded Memory Set Reconciliation}
-\label{bounded-set-reconciliation}
-\input{chapters/bounded_set_reconciliation}
 
 \chapter{Other Data Structures}
 \label{other-data-structures}
