@@ -1,45 +1,36 @@
 % !TEX root = ../main.tex
 
 The protocols described in this thesis work by computing fingerprints of sets.
-This chapter defines and motivates a specific fingerprinting scheme that admits fast computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{notation} introduces the required definitions, \cref{initial-considerations} outlines the solution space. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}, before we give the deterministic fingerprinting scheme in \cref{group-fingerprints}. \Cref{collisions} examines whether the fingerprints have suitable collision probabilities.
+This chapter defines and motivates a specific fingerprinting scheme that admits fast computation with small overhead for the storage and maintenance of auxiliary data structures. \cref{initial-considerations} outlines the solution space and theoretic bounds. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting.
 
-
-
-TODO: move the following definitions to where they are needed
-
-\begin{definition}
-A \defined{secure hash function} is a hash function $\fun{\h}{U}{D}$ that satisfies two additional properties:
-
-\begin{description}
-  \item[pre-image resistant:] 
-  \item[collision resistant:] 
-\end{description}
-\end{definition}
-
-\begin{definition}
-Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids and let $fun{f}{U_0}{U_1}$. We call $\f$ a \defined{monoid homomorphism} if it satisfies two properties:
-
-\begin{description}
-  \item[preserves operation:] for all $x, y \in U_0$: $\f(x \groupaddsym_0 y) = \f(x) \groupaddsym_1 \f(y)$
-  \item[preserves neutral element:] $f(\neutraladd_0) = \neutraladd_1$
-\end{description}
-\end{definition}
-
-\begin{definition}
-Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids. The \defined{direct product of $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_)$} is the monoid $(U_0 \times U_1, \f, (\neutraladd_0, \neutraladd_1))$ with $\f((u_0, u_1), (v_0, v_1)) \defeq (u_0 \groupaddsym_0 v_0, u_1 \groupaddsym_1 v_1)$.
-\end{definition}
-
-\begin{definition}
-Let $(U, \groupaddsym, \neutraladd)$ be a monoid.
-We call it a \defined{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = z$.
-\end{definition}
-
-\begin{definition}
-Let $(U, \groupaddsym, \neutraladd)$ be a (transitive) monoid.
-We call it a \defined{(transitive) group} if for all $x \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = \neutraladd$.
-This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
-For $x, y \in U$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
-\end{definition}
+%TODO: move the following definitions to where they are needed
+%
+%\begin{definition}
+%A \defined{secure hash function} is a hash function $\fun{\h}{U}{D}$ that satisfies two additional properties:
+%
+%\begin{description}
+%  \item[pre-image resistant:] 
+%  \item[collision resistant:] 
+%\end{description}
+%\end{definition}
+%
+%\begin{definition}
+%Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids and let $fun{f}{U_0}{U_1}$. We call $\f$ a \defined{monoid homomorphism} if it satisfies two properties:
+%
+%\begin{description}
+%  \item[preserves operation:] for all $x, y \in U_0$: $\f(x \groupaddsym_0 y) = \f(x) \groupaddsym_1 \f(y)$
+%  \item[preserves neutral element:] $f(\neutraladd_0) = \neutraladd_1$
+%\end{description}
+%\end{definition}
+%
+%\begin{definition}
+%Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids. The \defined{direct product of $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_)$} is the monoid $(U_0 \times U_1, \f, (\neutraladd_0, \neutraladd_1))$ with $\f((u_0, u_1), (v_0, v_1)) \defeq (u_0 \groupaddsym_0 v_0, u_1 \groupaddsym_1 v_1)$.
+%\end{definition}
+%
+%\begin{definition}
+%Let $(U, \groupaddsym, \neutraladd)$ be a monoid.
+%We call it a \defined{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = z$.
+%\end{definition}
 
 \section{Initial Considerations}
 \label{initial-considerations}
@@ -72,10 +63,13 @@ If $\preceq$ is a linear order, we write $x \prec y$ to denote that $x \preceq y
 \end{definition}
 
 \begin{definition}
-Let $U$ be a set, $\preceq$ a linear order on $U$, and $V \subseteq U$.
-A \defined{binary search tree on V} is a rooted tree $T$ with vertex set $V$ such that for any inner vertex $p$ with left child $a$ and right child $b$: $a \prec p \prec b$.
+Let $U$ be a set, $\preceq$ a linear order on $U$, and $V \subseteq U$. Let $T$ be a rooted directed tree with vertex set $V$.
 
-Let $v \in V$, then $T_v$ denotes the subgraph of $T$ that is a search tree with root $v$.
+Let $v \in V$, then $T_v$ denotes the subtree of $T$ with root $v$.
+
+$T$ is a \defined{binary search tree on V} if for all inner vertices $v$ with left child $a$ and right child $b$: $a' \prec v$ for all $a' \in T_a$ and $v \prec b'$ for all $b' \in T_b$.
+
+
 \end{definition}
 
 \begin{definition}
@@ -84,7 +78,7 @@ We call $T$ \defined{$\epsilon$-balanced} if $\textit{height}(T) \leq \ceil*{\ep
 Since the precise choice of $\epsilon$ will not matter for our complexity analyses, we will usually simply talk about \defined{balanced} trees.
 \end{definition}
 
-In the context of fingerprinting, balanced trees often take the form of Merkle trees~\cite{merkle1989certified}, binary trees storing items in their leaves, in which each leaf vertex are labeled with the hash of the associated item, and inner vertices are labeled with the hash of the concatenation of the child labels. The root label serves as a fingerprint for the set of items stored in the leaves.
+In the context of fingerprinting, balanced trees often take the form of Merkle trees~\cite{merkle1989certified}, binary trees storing items in their leaves, in which each leaf vertex is labeled with the hash of the associated item, and inner vertices are labeled with the hash of the concatenation of the child labels. The root label serves as a fingerprint for the set of items stored in the leaves.
 
 When inserting or removing an item, the number of labels that need updating is proportional to the length of of the path from the root to the item, so in a balanced tree of $n$ items $\complexity{\mathit{log}(n)}$. The problem with this approach however is that fingerprints are no longer unique: there are different balanced search trees storing the same items set, and different tree arrangements result in different root labels.
 
@@ -102,7 +96,7 @@ TODO: hash tries, possibly skip lists
 % tarjan set equality testing https://apps.dtic.mil/sti/pdfs/ADA223643.pdf
 % pugh function caching data structures http://matthewhammer.org/courses/csci7000-s17/readings/Pugh89.pdf
 
-\section{Associative Fingerprinting}
+\section{Incremental Computations}
 \label{group-fingerprints}
 
 We now study a family of fingerprinting functions for sets that admit efficient incremental computation based on an auxiliary tree structure, but whose output does not depend on the exact shape of that tree. We first examine a general class of such functions, which reduce a finite set to a single value according to a monoid.
@@ -134,11 +128,9 @@ In other words, if $S = \set{s_0, s_1, \ldots, s_{\abs{S} - 1}}$ with $s_0 \prec
 Functions of the form $\lift{\f}{\mathcal{M}}$ can be incrementally computed by using labeled binary search trees:
 
 \begin{definition}
-Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, $\fun{\f}{U}{M}$, and let $T$ be a binary search tree on $S$.
+Let $U$ be a set, $S \subset U$ a finite set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, $\fun{\f}{U}{M}$, and let $T$ be a binary search tree on $S$.
 
 We define a \defined{labeling function} $\fun{\liftlabel{\f}{\mathcal{M}}}{S}{M}$:
-
-% as $\liftlabel{\f}{\mathcal{M}}(v) \defeq \f(v)$ for every leaf $v$ and $\liftlabel{\f}{\mathcal{M}}(p) \defeq \groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(p)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}}$ for every internal vertex $p$ with left child $c_{<}$ and right child $c_{>}$. 
 
   \[
    \liftlabel{\f}{\mathcal{M}}(v) \defeq \begin{cases}
@@ -149,42 +141,9 @@ We define a \defined{labeling function} $\fun{\liftlabel{\f}{\mathcal{M}}}{S}{M}
 \end{cases}
   \]
 
+TODO fix overflow
 See \cref{fig:fp-tree} for an example.
 \end{definition}
-
-\begin{proposition}
-Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, $\fun{\f}{U}{M}$, and let $T$ be a binary search tree on $S$ with root $r \in S$.
-
-Then $\liftlabel{\f}{\mathcal{M}}(r) = \lift{\f}{\mathcal{M}}(S)$.
-
-\begin{proof}
-If $r$ is a leaf, then $\abs{\V(T)} = 1$ and thus $\liftlabel{\f}{\mathcal{M}}(r) \overset{\text{def}}= \f(r) \overset{\text{def}}= \lift{\f}{\mathcal{M}}(\V(T)) = \lift{\f}{\mathcal{M}}(S)$.
-Otherwise, $r$ is an internal vertex. Assume $r$ is an internal vertex with left child $c_{<}$ and right child $c_{>}$ and for which $\liftlabel{\f}{\mathcal{M}}(c_{<}) = \lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))$ and $\liftlabel{\f}{\mathcal{M}}(c_{>}) = \lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))$ already holds. Then $\liftlabel{\f}{\mathcal{M}}(r) \overset{\text{def}}= \groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(r)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}} \overset{\text{IH}}= \groupadd{\lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))}{\groupadd{\f(p)}{\lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))}} \overset{\text{def}}= \lift{\f}{\mathcal{M}}(\V(T)) = \lift{\f}{\mathcal{M}}(S)$.
-
-The cases for internal vertices with exactly one child follow analogously.
-\end{proof}
-\end{proposition}
-
-This correspondence can be used to incrementally compute $\lift{\f}{\mathcal{M}}(S)$: Initially, a labeled search tree storing the items in $S$ is constructed. $\lift{\f}{\mathcal{M}}(S)$ is the root label. When an item is inserted or removed, only the labels on the path from the root to the point of modification need to recomputation, so only a logarithmic number of operations if a self-balancing tree is used.
-
-Note that the exact shape of the tree determines the grouping of how to apply $\groupaddsym$, but by associativity all groupings yield the same result. All trees storing the same set have the same fingerprint.
-
-
-TODO cleanup
-
-
-%Let $U$ be the universe of interest, $\preceq$ a linear order on $U$, $\fun{\h}{U}{D}$ a hash function mapping items into some finite set $D$, and let $(D, \groupaddsym, \neutraladd)$ be a monoid. For subsets $S \subseteq U$ we define the fingerprinting function $\fun{\operatorname{fp}}{\mathcal{P}(U)}{D}$ as
-%
-%\begin{align*}
-%\fp{\emptyset} &\defeq \mymathbb{0}\\
-%\fp{S} &\defeq \h(\mathit{min}(S)) \oplus \fp{S \setminus \mathit{min}(S)}\\
-%\end{align*}
-%
-%In other words, if $S = \set{s_0, s_1, \ldots, s_{\abs{S} - 1}}$ with $s_0 \prec s_1 \prec \ldots \prec s_{\abs{S} - 1}$, then $\fp{S} = \groupadd{\h(s_0)}{\groupadd{\h(s_1)}{\groupadd{\ldots}{\h(s_{\abs{S} - 1})}}}$. If $\groupaddsym$ can be computed in $\complexity{1}$, then fingerprints can be computed in $\complexity{\abs{S}}$.
-%
-%As $\groupaddsym$ is associative, incremental computation of fingerprints can be achieved by using a labeled binary search tree. Let $\mathcal{T}$ be a binary search tree on $S$ with root $r$, and let $\lbl(v) \defeq \h(v)$ for every leaf $v$ and let $\lbl(p) \defeq \groupadd{\lbl(c_{<})}{\groupadd{\h(p)}{\lbl(c_{>})}}$ for every internal vertex $p$ with left child $c_{<}$ and right child $c_{>}$, see \cref{fig:fp-tree} for an example. By induction using the associativity of $\groupaddsym$ it follows that the label of a vertex is equal to the fingerprint of all its descendents, and thus in particular $\lbl(r) = \fp{S}$. The exact shape of the tree determines the grouping of how to apply $\groupaddsym$, but by associativity all groupings yield the same result. All trees storing the same set have the same fingerprint.
-%
-%This tree can be implemented as a self-balancing tree that stores one intermediate fingerprint per vertex. Incremental recomputation of fingerprints can thus be achieved in logarithmic time by maintaining this tree and reading the fingerprint of the set off the root, at the cost of $\complexity{\abs{S}}$ additional space for storing one fingerprint per vertex.
 
 \begin{figure*}
 \begin{scaletikzpicturetowidth}{\textwidth}
@@ -223,15 +182,58 @@ TODO cleanup
 \end{scaletikzpicturetowidth}
 
 \caption{
-A balanced search tree whose labels are the fingerprints over all descendents of a node.
+A balanced search tree labeled by $\liftlabel{\h}{(M, \groupaddsym, \neutraladd)}$. For fingerprinting, $\h$ could be a hash function and $\groupaddsym$ the xor operation on fixed-width bitstrings.
 }
 
 \label{fig:fp-tree}
 \end{figure*}
 
-If $U$ is small enough that space usage of $\complexity{\abs{U}}$ is acceptable, an implicit representation such as a binary indexed tree (Fenwick tree)~\cite{fenwick1994new} can be used. Array positions that correspond to some $u \in U \setminus S$ are simply filled with a dummy value whose hash is defined to be $\neutraladd$.
+\begin{proposition}
+Let $U$ be a set, $S \subset U$ a finite set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, $\fun{\f}{U}{M}$, and let $T$ be a binary search tree on $S$ with root $r \in S$.
 
-A labeled, balanced search tree $\mathcal{T}$ for a set $S$ can also be utilized to compute the fingerprint of any $\interval{x}{y}{S}$ in at most $\complexity{\log(\abs{S})}$ time. Note that for all $S' \subseteq U$ with $S' = \disjointunion{A}{B}$ it holds that $\fp{S'} = \groupadd{\fp{A}}{\fp{B}}$. The basic idea is that the fingerprint can be computed by tracing paths paths from the root node to both $x$ and $y$, and summing up the hashes of vertices on those paths which fall into the interval, as well as the labels of their children which fall into the interval. \Cref{listing:subset-fingerprint} gives the precise algorithm.
+Then $\liftlabel{\f}{\mathcal{M}}(r) = \lift{\f}{\mathcal{M}}(S)$.
+
+\begin{proof}
+By induction on the number of vertices of $T$.
+
+\textbf{IB:} If $r$ is a leaf, then $\abs{\V(T)} = 1$ and thus $\liftlabel{\f}{\mathcal{M}}(r) \overset{\text{def}}= \f(r) \overset{\text{def}}= \lift{\f}{\mathcal{M}}(\V(T)) = \lift{\f}{\mathcal{M}}(S)$.
+
+\textbf{IH:} Let  $c_{<}$ and $c_{>}$ be vertices for which $\liftlabel{\f}{\mathcal{M}}(c_{<}) = \lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))$ and $\liftlabel{\f}{\mathcal{M}}(c_{>}) = \lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))$.
+
+\textbf{IS:} If $r$ is an internal vertex with left child $c_{<}$ and right child $c_{>}$, then:
+
+\begin{align*}
+ \liftlabel{\f}{\mathcal{M}}(r) &\overset{\text{def}}= \groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(r)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}}\\
+&\overset{\text{IH}}= \groupadd{\lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))}{\groupadd{\f(p)}{\lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))}}\\
+& \overset{\text{def}}= \lift{\f}{\mathcal{M}}(\V(T))\\
+&= \lift{\f}{\mathcal{M}}(S)\\
+\end{align*}
+
+The cases for internal vertices with exactly one child follow analogously.
+\end{proof}
+\end{proposition}
+
+This correspondence can be used to incrementally compute $\lift{\f}{\mathcal{M}}(S)$: Initially, a labeled search tree storing the items in $S$ is constructed. $\lift{\f}{\mathcal{M}}(S)$ is the root label. When an item is inserted or removed, only the labels on the path from the root to the point of modification require recomputation, so only a logarithmic number of operations is performed if a self-balancing tree is used.
+
+Note that the exact shape of the tree determines the grouping of how to apply $\groupaddsym$, but by associativity all groupings yield the same result. All trees storing the same set have the same root label.
+
+If $U$ is small enough that space usage of $\complexity{\abs{U}}$ is acceptable, an implicit tree representation such as a binary indexed tree (Fenwick tree)~\cite{fenwick1994new} can be used. Array positions that correspond to some $u \in U \setminus S$ are simply filled with a dummy value whose hash is defined to be $\neutraladd$.
+
+\subsection{Subsets}
+
+In addition to incremental computation of the fingerprint of a given set, the reconciliation protocol also requires the efficient computation of the fingerprints of arbitrary intervals of the given set. We first fix some terminology and notation:
+
+\begin{definition}
+Let $S \subseteq U$, $\preceq$ a linear order over $U$, and $x, y \in U$.
+
+The \defined{interval from $x$ to $y$ in $S$}, denoted by $\interval{x}{y}{S}$, is the set $\set{s \in S | x \preceq s \prec y}$. We call $x$ the \defined{lower boundary} and $y$ the \defined{upper boundary} of the interval.
+
+Note that the upper boundary is excluded from the interval, so in particular $\interval{x}{x}{S} = \emptyset$.
+\end{definition}
+
+Given a balanced search tree $T$ with root $r$ for a set $S$ that is labeled by $\liftlabel{\f}{\mathcal{M}}$, we can compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ in logarithmic time. Intuitively, one traces paths in $T$ to both $x$ and $y$, and then the result is the sum over all vertices ``in the area between'' these paths. For every vertex on the traced paths, the label of the ``inner'' child vertex summarizes multiple vertices within the area. Summing over all these children yields the value corresponding to the whole inner area. Since the length of the delimiting paths is logarithmic, overall only a logarithmic number of labels needs to be added up.
+
+\Cref{listing:subset-fingerprint} gives a precise definition of how to compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$, for clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child, almost the same algorithm can be used, acting as if these nodes also had a second child labeled with $\neutraladd$.
 
 \begin{listing}[ht]
 \begin{minted}[linenos, mathescape]{haskell}
@@ -251,7 +253,7 @@ intervalFingerprint :: Node -> U -> U -> D
 intervalFingerprint v x y = case findInitial v x y of
     Nothing               -> 0
     Just (Leaf _ fp)      -> fp
-    Just (Inner l v' r _) -> (sumGeq l x) + (h v') + (sumLt r y)
+    Just (Inner l v' r _) -> (sumGeq l x) + (f v') + (sumLt r y)
                                            
 -- Find the node within $\interval{x}{y}{S}$ that is closest to the root.
 findInitial :: Node -> U -> U -> Maybe Node
@@ -271,7 +273,7 @@ sumGeq (Leaf v fp) x
     | otherwise = fp
 sumGeq (Inner l v r _) x
     | v < x     = sumGeq r x
-    | otherwise = (sumGeq l x) + (h v) + (label r)
+    | otherwise = (sumGeq l x) + (f v) + (label r)
 
 -- Sum up the fingerprints of all items in the given tree
 -- which are strictly less than $y$.
@@ -281,23 +283,53 @@ sumLt (Leaf v fp) y
     | otherwise = fp
 sumLt (Inner l v r _) y
     | v >= y    = sumLt l y
-    | otherwise = (label l) + (h v) + (sumLt r y)
+    | otherwise = (label l) + (f v) + (sumLt r y)
 \end{minted}
-\caption{Computing $\interval{x}{y}{S'}$ from the labeled search tree of some $S \supseteq S'$.}
+\caption{Computing $\interval{x}{y}{S}$ from the complete labeled search tree of $S$.}
 \label{listing:subset-fingerprint}
 \end{listing}
 
-A slightly simpler approach can be taken if $(U, \groupaddsym, \neutraladd)$ is a group. Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $fp{\interval{x}{y}{S}} = \groupadd{\inverseadd{\fp{\interval{\min(S)}{x}{S}}}}{\fp{\interval{\min(S)}{y}{S}}}$. Reusing the definitions from \cref{listing:subset-fingerprint}, we get:
+The algorithm proceeds by first finding the vertex $v$ with the smallest distance to the root such that $x \preceq v \prec y$. This might be $r$ itself. If there is no such $v$, then $\interval{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \neutraladd$. All vertices of $T$ that are not vertices $T_v$ are either greater than or equal to $y$ if $v \prec`x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$.
+
+If $v$ is a leaf, $\interval{x}{y}{S} = \set{v}$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \f(v)$. Otherwise, let $c_{<}$ be the left child of $v$ and let $c_{>}$ be the right child. Since all vertices in $T_{c_{>}}$ are greater than $v$, they are in particular greater than $x$. Analogously all vertices in $T_{c_{<}}$ are less than $y$.
+Thus, $\interval{x}{y}{S} = \disjointunion{\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})}}{\disjointunion{\set{v}}{\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})}}}$ and $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \groupadd{\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})}{\groupadd{\f(v)}{\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})}}$.
+
+Proving that \texttt{sumGeq} from \cref{listing:subset-fingerprint} does indeed sum over all $\f(v)$ in the given tree with $x \preceq v$, i.e. computes $\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be done by a rather technical but straightforward induction which we omit, same for \texttt{sumLt} computing $\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})$. From those facts, correctness of \texttt{intervalFingerprintGroup} follows from the previous arguments.
+
+The worst-case running time occurs when the vertex $v$ with the smallest distance to $r$ such that $x \preceq v \prec y$ is $r$ itself, since then both \texttt{sumGeq} and \texttt{sumLt} do a traversal to a leaf. Since $T$ is balanced, only a logarithmic number of recursive calls is executed. Assuming $\f$ can be computed in $\complexity{1}$, the resulting time complexity is in $\complexity{\log(\abs{S})}$.
+
+A slightly simpler approach can be taken if $M$ has efficiently computable inverses with respect to $\groupaddsym$, i.e. if $(M, \groupaddsym, \neutraladd)$ is a group.
+
+\begin{definition}
+Let $(M, \groupaddsym, \neutraladd)$ be a monoid.
+We call it a \defined{group} if for all $x \in M$ there exists $y \in M$ such that $\groupadd{x}{y} = \neutraladd$.
+This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
+For $x, y \in M$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
+\end{definition}
+
+Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $fp{\interval{x}{y}{S}} = \groupadd{\inverseadd{\fp{\interval{\min(S)}{x}{S}}}}{\fp{\interval{\min(S)}{y}{S}}}$. Reusing the definitions from \cref{listing:subset-fingerprint}, we get:
 
 \begin{minted}{haskell}
 intervalFingerprintGroup :: Node -> U -> U -> D
-intervalFingerprintGroup v x y = -(sumLt v x) + (sumLt v x)
+intervalFingerprintGroup v x y = -(sumLt v x) + (sumLt v y)
 \end{minted}
 
-\section{Fingerprint Collisions}
+Alternatively, a slightly more efficient version that still does not require \texttt{sumGeq}:
+
+\begin{minted}{haskell}
+intervalFingerprint :: Node -> U -> U -> D
+intervalFingerprint v x y = case findInitial v x y of
+    Nothing               -> 0
+    Just (Leaf _ fp)      -> fp
+    Just (Inner l v' r _) -> -(sumLt l x) + (f v') + (sumLt r y)
+\end{minted}
+
+\section{Monoidal Fingerprints}
 \label{collisions}
 
+Now that we have characterized a family of functions that admit efficient recomputation in response to changes to the underlying set as well as efficient computation for intervals of the set, the remaining task is to find such functions which are also suitable fingerprints. This consists of deciding on the monoid of fingerprints, and choosing the mapping from items to monoid elements.
 
+TODO read more papers on this, then continue writing with proper references
 
 
 
