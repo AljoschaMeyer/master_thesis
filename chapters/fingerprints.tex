@@ -1,18 +1,9 @@
 % !TEX root = ../main.tex
 
-The protocols described in this thesis work by computing fingerprints of sets.
-This chapter defines and motivates a specific fingerprinting scheme that admits fast computation with small overhead for the storage and maintenance of auxiliary data structures. \cref{initial-considerations} outlines the solution space and theoretic bounds. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting.
+The protocols we will discuss work by recursively computing and comparing fingerprints of sets.
+This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions.
 
 %TODO: move the following definitions to where they are needed
-%
-%\begin{definition}
-%A \defined{secure hash function} is a hash function $\fun{\h}{U}{D}$ that satisfies two additional properties:
-%
-%\begin{description}
-%  \item[pre-image resistant:] 
-%  \item[collision resistant:] 
-%\end{description}
-%\end{definition}
 %
 %\begin{definition}
 %Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids and let $fun{f}{U_0}{U_1}$. We call $\f$ a \defined{monoid homomorphism} if it satisfies two properties:
@@ -26,19 +17,14 @@ This chapter defines and motivates a specific fingerprinting scheme that admits 
 %\begin{definition}
 %Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids. The \defined{direct product of $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_)$} is the monoid $(U_0 \times U_1, \f, (\neutraladd_0, \neutraladd_1))$ with $\f((u_0, u_1), (v_0, v_1)) \defeq (u_0 \groupaddsym_0 v_0, u_1 \groupaddsym_1 v_1)$.
 %\end{definition}
-%
-%\begin{definition}
-%Let $(U, \groupaddsym, \neutraladd)$ be a monoid.
-%We call it a \defined{transitive monoid} if for all $x, z \in U$ there exists $y \in U$ such that $\groupadd{x}{y} = z$.
-%\end{definition}
 
 \section{Initial Considerations}
 \label{initial-considerations}
 
-The protocols explored in this thesis work by recursively testing fingerprints for equality. For our purposes, we can define a fingerprint or hash function as follows:
+Our protocols work by recursively testing fingerprints for equality. For our purposes, we can define a fingerprint or hash function as follows:
 
 \begin{definition}
-A \defined{hash function} is a function $\fun{\h}{U}{D}$ with a finite codomain such that for randomly chosen $u \in U$ and $d \in D$ the probability that $\h(u) = d$ is roughly $\frac{1}{\abs{D}}$. $\h(u)$ is called the \defined{hash of $u$}, \defined{fingerprint of $u$} or \defined{digest of $u$}.
+A \defined{hash function} is a function $\fun{\h}{U}{D}$ with a finite codomain such that for randomly chosen $u \in U$ and $d \in D$ the probability that $\h(u) = d$ is roughly\footnote{To keep the focus on data structure synchronization rather than being sidetracked by cryptography, we will for the most part keep arguments about probabilities qualitative rather than quantitative.} $\frac{1}{\abs{D}}$. $\h(u)$ is called the \defined{hash of $u$}, \defined{fingerprint of $u$} or \defined{digest of $u$}.
 \end{definition}
 
 Given a universe $U$ of items, a function $\enc : U \rightarrow \{0, 1\}^{*}$ for encoding items as binary strings, a linear order $\preceq$ on $U$, a hash function $\h: \{0, 1\}^{*} \rightarrow \{0, 1\}^{k}$ mapping binary strings to binary strings of length $k$ and some finite $S \subseteq U$, a natural starting point for defining a fingerprint of the set $S$ is to sort the items according to $\preceq$, concatenate the encodings, and hash the resulting string.
@@ -233,9 +219,9 @@ Note that the upper boundary is excluded from the interval, so in particular $\i
 
 Given a balanced search tree $T$ with root $r$ for a set $S$ that is labeled by $\liftlabel{\f}{\mathcal{M}}$, we can compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ in logarithmic time. Intuitively, one traces paths in $T$ to both $x$ and $y$, and then the result is the sum over all vertices ``in the area between'' these paths. For every vertex on the traced paths, the label of the ``inner'' child vertex summarizes multiple vertices within the area. Summing over all these children yields the value corresponding to the whole inner area. Since the length of the delimiting paths is logarithmic, overall only a logarithmic number of labels needs to be added up.
 
-\Cref{listing:subset-fingerprint} gives a precise definition of how to compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$, for clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child, almost the same algorithm can be used, acting as if these nodes also had a second child labeled with $\neutraladd$.
+\Cref{listing:subset-fingerprint} gives a precise definition of how to compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ as Haskell~98~\cite{jones2003haskell} code, for clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child. These can be handled with almost the same algorithm by acting as if these nodes had a second child labeled with $\neutraladd$.
 
-\begin{listing}[ht]
+\begin{listing}
 \begin{minted}[linenos, mathescape]{haskell}
 -- $U$ is the type of items, $D$ the type of fingerprints.
 -- A node is either a leaf or an inner vertex.
@@ -260,7 +246,7 @@ findInitial :: Node -> U -> U -> Maybe Node
 findInitial (Leaf v _) x y
     | x <= v && v < y = Just v
     | otherwise       = Nothing
-findInitial (Inner l v r _)
+findInitial (Inner l v r _) x y
     | v < x           = findInitial r x y
     | v >= y          = findInitial l x y
     | otherwise       = Just v
@@ -289,14 +275,23 @@ sumLt (Inner l v r _) y
 \label{listing:subset-fingerprint}
 \end{listing}
 
-The algorithm proceeds by first finding the vertex $v$ with the smallest distance to the root such that $x \preceq v \prec y$. This might be $r$ itself. If there is no such $v$, then $\interval{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \neutraladd$. All vertices of $T$ that are not vertices $T_v$ are either greater than or equal to $y$ if $v \prec`x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$.
+The algorithm proceeds by first finding the vertex $v$ with the smallest distance to the root such that $x \preceq v \prec y$. This might be $r$ itself. If there is no such $v$, then $\interval{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \neutraladd$. All vertices of $T$ that are not vertices in $T_v$ are either greater than or equal to $y$ if $v \prec`x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$.
 
 If $v$ is a leaf, $\interval{x}{y}{S} = \set{v}$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \f(v)$. Otherwise, let $c_{<}$ be the left child of $v$ and let $c_{>}$ be the right child. Since all vertices in $T_{c_{>}}$ are greater than $v$, they are in particular greater than $x$. Analogously all vertices in $T_{c_{<}}$ are less than $y$.
-Thus, $\interval{x}{y}{S} = \disjointunion{\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})}}{\disjointunion{\set{v}}{\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})}}}$ and $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \groupadd{\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})}{\groupadd{\f(v)}{\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})}}$.
 
-Proving that \texttt{sumGeq} from \cref{listing:subset-fingerprint} does indeed sum over all $\f(v)$ in the given tree with $x \preceq v$, i.e. computes $\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be done by a rather technical but straightforward induction which we omit, same for \texttt{sumLt} computing $\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})$. From those facts, correctness of \texttt{intervalFingerprintGroup} follows from the previous arguments.
+Keeping in mind that $\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})}$ simply denotes the set of vertices in $T_{c_{<}}$ that are strictly greater than $x$, and analogously $\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})}$ denoting the vertices of $T_{c_{>}}$ that are less than or equal to $y$, we have:
 
-The worst-case running time occurs when the vertex $v$ with the smallest distance to $r$ such that $x \preceq v \prec y$ is $r$ itself, since then both \texttt{sumGeq} and \texttt{sumLt} do a traversal to a leaf. Since $T$ is balanced, only a logarithmic number of recursive calls is executed. Assuming $\f$ can be computed in $\complexity{1}$, the resulting time complexity is in $\complexity{\log(\abs{S})}$.
+\begin{align*}
+\interval{x}{y}{S} &= \disjointunion{\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})}}{\disjointunion{\set{v}}{\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})}}}\\
+&\mathrm{implying}\\
+\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) &= \groupadd{\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})}{\groupadd{\f(v)}{\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})}}\\
+\end{align*}
+
+Proving that \texttt{sumGeq} from \cref{listing:subset-fingerprint} does indeed sum over all $\f(v)$ in the given tree with $x \preceq v$, i.e. computes $\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be done by a rather technical but straightforward induction which we omit, same for \texttt{sumLt} computing $\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})$.
+
+From those facts, correctness of \texttt{intervalFingerprintGroup} follows by the previous arguments.
+
+The worst-case running time occurs when the vertex $v$ with the smallest distance to $r$ such that $x \preceq v \prec y$ is $r$ itself, since then both \texttt{sumGeq} and \texttt{sumLt} perform a traversal to a leaf of maximal length. Since $T$ is balanced, only a logarithmic number of recursive calls is executed. Assuming $\f$ can be computed in $\complexity{1}$, the resulting time complexity is in $\complexity{\log(\abs{S})}$.
 
 A slightly simpler approach can be taken if $M$ has efficiently computable inverses with respect to $\groupaddsym$, i.e. if $(M, \groupaddsym, \neutraladd)$ is a group.
 
@@ -307,7 +302,7 @@ This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
 For $x, y \in M$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
 \end{definition}
 
-Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $fp{\interval{x}{y}{S}} = \groupadd{\inverseadd{\fp{\interval{\min(S)}{x}{S}}}}{\fp{\interval{\min(S)}{y}{S}}}$. Reusing the definitions from \cref{listing:subset-fingerprint}, we get:
+Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \groupadd{\inverseadd{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{x}{S})}}{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{y}{S})}$. Reusing the definitions from \cref{listing:subset-fingerprint}, we get:
 
 \begin{minted}{haskell}
 intervalFingerprintGroup :: Node -> U -> U -> D
@@ -327,78 +322,110 @@ intervalFingerprint v x y = case findInitial v x y of
 \section{Monoidal Fingerprints}
 \label{collisions}
 
-Now that we have characterized a family of functions that admit efficient recomputation in response to changes to the underlying set as well as efficient computation for intervals of the set, the remaining task is to find such functions which are also suitable fingerprints. This consists of deciding on the monoid of fingerprints, and choosing the mapping from items to monoid elements.
+Now that we have characterized a family of functions that admit efficient recomputation in response to changes to the underlying set as well as efficient computation for intervals within the set, the remaining task is to find such functions which are also suitable fingerprints. This consists of deciding on the monoid of fingerprints, and choosing the mapping from items to monoid elements.
 
-TODO read more papers on this, then continue writing with proper references
+As the fingerprint of a singleton set $\lift{\f}{\mathcal{M}}(\set{u})$ is equal to $\f(u)$, $\f$ must itself already be a hash function. Typical hash functions map values to bit strings of a certain length, i.e. the codomain is $\set{0, 1}^k$ for some $k \in \N$. We will thus consider monoids whose elements can be represented by such bit strings.
+
+A natural choice of the monoid universe is then $\interval{0}{2^k}{\N}$, some simple monoidical operations on this universe include bitwise xor, addition modulo $2^k$, and multiplication modulo $2^k$. In the following, addition and multiplication will always be implicitly taken modulo $2^k$. Note that $\xor$ and addition also admit inverses, so the slightly simplified computational fingerprints can be used.
+
+Of these three options, multiplication is the least suitable, because multiplying $0$ by any number again yields $0$. Consequently for every set containing an item $u$ with $\f(u) = 0$ the fingerprint of the set would also be $0$, which clearly violates the criterion that all possible values for fingerprints occur with equal probability.
+
+Addition and xor however are particularly well-behaved in that regard, as they form finite commutative groups:
+
+\begin{proposition}
+Let $\mathcal{G} \defeq (G, \groupaddsym, \neutraladd)$ be a finite commutative group, i.e. a group with a finite universe such that for all $x, y \in G$: $\groupadd{x}{y} = \groupadd{y}{x}$. Let $U$ be a set and let $\fun{f}{U}{G}$ be a hash function.
+
+Then $\lift{\f}{\mathcal{G}}$ is a hash function as well.
+
+\begin{proof}
+We first show that for randomly chosen $x, y, z \in G$ the probability that $\groupadd{x}{y} = z$ is $\frac{1}{\abs{G}}$.
+
+For $x, z \in G$ there is $y \in G$ such that $\groupadd{x}{y} = z$, namely $y \defeq \groupsubtract{z}{x}$ (because $\groupadd{x}{\groupsubtract{z}{x}} \overset{\text{commutativity}}= \groupadd{\groupadd{x}{\inverseadd{x}}}{z} = z$). As $G$ is finite, this $y$ has to be unique, since otherwise that would not be enough elements left that can be added to $x$ to result all of the $\abs{G} - 1$ possible remaining $z'$. Thus for any fixed $x, z$ the probability that a randomly chosen $y$ satisfies $\groupadd{x}{y} = z$ is $\frac{1}{\abs{G}}$.
+
+Computing $\lift{\f}{\mathcal{G}}(S)$ consists of repeatedly adding group elements which by themselves are distributed uniformly at random if $S$ was chosen randomly and $\f$ is a high quality hash function. Thus the accumulated value after every step is any given $z \in G$ with probability $\frac{1}{\abs{G}}$, as is in particular the probability for the result being equal to $z$.
+\end{proof}
+\end{proposition}
+
+By the same argument, knowing the fingerprint for some set does not provide any information about the fingerprints for sets that differ by even only a single value. In conclusion, high quality fingerprints can be achieved by choosing any transitive and commutative operation for the monoid, for example xor or addition modulo $2^k$, as long as values are mapped into the monoid with a high quality hash function.
+
+\section{Cryptographically Secure Fingerprints}
+\label{crypto}
+
+In the protocols for synchronizing data structures, fingerprints of sets are used for probabilistic equality checking: sets with equal fingerprints are assumed to be equal. Synchronization can thus become faulty if it involves unequal sets with equal fingerprints. If the universe of possible fingerprints is chosen large enough, and the distribution of fingerprints of randomly chosen sets is random within that universe, the probability for this occurring becomes negligible.
+
+Random distribution of input sets is however a very strong assumption. What if a malicious party can influence the sets to be fingerprinted, with the goal of causing fingerprint collisions and consequently triggering faulty behavior of the system? Cryptographically secure fingerprints are an answer to this problem, being chosen such that it is computationally infeasible for an adversary to find inputs that lead to faulty synchronization.
+
+\subsection{General Considerations}
+
+Traditionally (TODO citation needed), cryptographically secure hash functions are defined as follows:
+
+\begin{definition}
+A \defined{secure hash function} is a hash function $\fun{\h}{U}{D}$ that satisfies two additional properties:
+
+\begin{description}
+  \item[pre-image resistance:] Given $d \in D$, it is computationally infeasible to find a $u \in U$ such that $\h(u) = d$.
+  \item[collision resistance:] It is computationally infeasible to find $u, v \in U, u ~= v$ such that $\h(u) = \h(v)$.
+\end{description}
+\end{definition}
+
+Pre-image resistance has no influence on the vulnerability of the protocol to malicious actors, so all of the following discussion will focus on collision resistance only.
+
+Since $\lift{\f}{\mathcal{M}}(\set{u}) = \f(u)$, $\f$ must necessarily be collision resistant if $\lift{\f}{\mathcal{M}}$ is to be collision resistant. This alone is unfortunately not sufficient, we will see a specific counterexamples in the following subsections. Choosing a secure hash function $\f$ always comes with a performance cost, insecure hash functions usually take less time and less space to compute. If the synchronization protocol is only being run in a trusted environment, an insecure hash function might be preferable.
+
+Whether a hash function is secure is not a binary dichotomy, but depends on what is considered ``feasible'' for an adversary. Greater security can usually be obtained at the cost of longer digests and longer computation times. Before presenting options for secure hash functions, we thus examine the impact of hash collisions first.
+
+We can generally distinguish between malicious actors in two different positions: those who can actively impact the contents of the data structure to be synchronized, and those who passively relay updates and needs to search for a collision within the available data.
+
+A passive malicious actor 
 
 
 
 
 
-%\begin{minted}{rust}
-%// `U` is the type of items, `D` the type of fingerprints.
-%
-%// A `Node` is either a leaf or an inner vertex.
-%// Both store a fingerprint as a label.
-%enum Node {
-%    Leaf(U, D),
-%    Inner(Node, U, Node, D),
-%}
-%
-%// Compute the fingerprint over all items stored in `v`
-%// within the interval [`x`, `y`).
-%fn interval_fingerprint(v: Node, x: U, y: U) -> D {
-%    match find_initial(v, x, y) {
-%        None => return 0,
-%        Some(Leaf(_, fp)) => return fp,
-%        Some(Inner(cl, v2, cr, _)) => {
-%            return sum_geq(cl, x) + h(v2) + sum_lt(cr, y);
-%        }
-%    }
-%}
-%
-%fn find_initial(v: Node, x: U, y: U) -> Option<Node> {
-%    match v {
-%        Leaf(v2, _) => {
-%            if x <= v2 < y {
-%                return Some(v);
-%            } else {
-%                return None;
-%            }
-%        }
-%        Inner(cl, v2, cr, _) => {
-%            if y <= v2 {
-%                return find_initial(cl, x, y);
-%            } else if x > v2 {
-%                return find_initial(cr, x, y);
-%            } else {
-%                return v2;
-%            }
-%        }
-%    }
-%}
-%\end{minted}
 
 
 
 
 
 
-%We begin by fixing some notation.
-%We denote the set of items to be placed inside a data structure by $U$. Let $\preceq$ be a linear order on $U$. For $x, y \in U$, $x \preceq y$ and $A \subseteq U$, we write $\interval{x}{y}{A}$ to denote the set $\{a \in A | x \preceq a \prec y\}$.
 
-%Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$. 
-%
-%Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$, e.g. the set of k-bit integers for some natural number $k$.
-%Let $\oplus: H \times H \rightarrow H$ be a function such that $(H, \oplus, \mymathbb{0})$ form a group with neutral element $\mymathbb{0} \in H$, e.g. addition modulo $k$ with neutral element $0$.
-%
-%We write $f(X)$ for the fingerprint of a set of items $X$, which is the same as the fingerprint for the ordered list obtained by sorting $X$ according to $\leq$, denoted as $f(x_0, x_1, \ldots)$ and defined as the sum over all $h(x_1)$:
-%
-%\begin{align*}
-%f() &= \mymathbb{0}\\
-%f(x_0, x_1, \ldots) &= h(x_0) \oplus f(x_1, \ldots)\\
-%\end{align*}
-%
-%Observe that $f(\interval{x}{y}{A}) = f(\interval{min(A)}{y}{A}) \ominus f(\interval{min(A)}{x}{A})$. For efficient computation of fingerprints for arbitrary intervals it thus suffices to be able to efficiently compute the sum of hashes over arbitrary prefixes of $A$ sorted according to $\leq$.
-%
-%To that end, store $A$ in a balanced search tree that holds the sum over the hashes of all descendents in every internal vertex, and the elements of $A$ in the leaves (this can be maintained as a self-balancing tree). $f(\interval{min(A)}{x}{A})$ can then be computed in $O(log(n))$ time by traversing from the root to $x$ and summing over the hashes stored in the left children of all vertices encountered in the traversal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

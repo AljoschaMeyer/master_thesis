@@ -5,6 +5,9 @@
   \item hash graph synchronization
   \item filesystem synchronization
   \item history-based synchronization
+  \item authenticated data structures
+  \item hashing sets (pugh, tarjan...)
+% https://scholar.google.com/scholar?hl=de&as_sdt=0%2C5&q=A%20General%20Model%20for%20Authenticated%20Data%20Structures
 \end{itemize}
 
 %The literature for set reconciliation is fixated on minimizing roundtrips, at the cost of high computation times. \cite{minsky2003set} gives theoretical limits and a very clever protocol approaching them, but which requires $O(n^3)$ computation time per round-trip. The authors acknowledge the practical infeasibility and offer \cite{minsky2002practical}, which is also the only paper that cares whether auxiliary data structures can be efficiently synchronized with the set to reconcile as it changes. They use a simpler approach highly related to error-correcting codes: Both peers send a digest, if the digests are similar enough, the union can be computed from holding both digests and one of the sets. If they are not similar enough, the set has been too large, so they recursively reconcile partitions of the set. Unfortunately, their auxiliary data structure is not self-balancing, so their complexity guarantees degrade as the set to reconcile is being modified.

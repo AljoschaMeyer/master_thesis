@@ -125,8 +125,7 @@ are three possible cases:
 
 \begin{itemize}
 \item
-  $\mathcal{B}$ computed the same fingerprint it received, then the interval has
-  been fully reconciled and the protocol terminates.
+  $\mathcal{B}$ computed the same fingerprint it received, then the interval is considered to be fully reconciled and the protocol terminates. This makes the protocol probabilistic, it is only reliable if the probability of two different sets having the same fingerprint is negligible.
 \item
   $\mathcal{B}$ has no numbers within the interval, $\mathcal{B}$ then notifies $\mathcal{A}$, $\mathcal{A}$
   transmits all its numbers from the interval, and the interval has been

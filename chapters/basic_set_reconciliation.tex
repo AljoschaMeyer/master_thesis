@@ -42,7 +42,7 @@ $X_1 \defeq \{\examplea, \examplee, \examplef, \exampleg\}$
 	
 	\begin{pgfonlayer}{main}
 		%vertices
-		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\examplea, \examplee, \examplef, \exampleg\}}};
+		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \examplee, \examplef, \exampleg\}}};
 
 		\node (v00) at (-4, -0) [fpi] {\examplefpi{\examplea}{\examplee}{\{\exampleb, \examplec, \exampled\}}};
 		\node (v01) at (4, -0) [fpi] {\examplefpi{\examplee}{\examplei}{\{\examplee, \examplef, \exampleh\}}};
@@ -324,6 +324,9 @@ Since the protocol interprets equal interval fingerprints as both nodes holding 
 One can use smaller fingerprints if in case of equal fingerprints the nodes then exchange an additional fingerprint rather than immediately stopping the recursion for this interval. Whenever a node receives a first-level interval fingerprint that is equal to its own, it answers with the second-level fingerprint for the same interval. When a node receives a second-level interval fingerprint that is equal to its own, it terminates the recursion. If it is not equal, it recurses as usual, in particular it sends first-level fingerprints for any large subintervals.
 
 This scheme can of course be extended to an arbitrary number of fingerprint levels. Every level increases the worst-case number of roundtrips by one, but decreases the average message size. If cryptographically secure fingerprints are desired, low levels of the fingerprint hierarchy do not have to be secure, only the top level fingerprint needs to be so. Alternatively, each fingerprint level can consist of some substring of a long, cryptographically secure fingerprint, such that the concatenation of these substrings yields the original fingerprint.
+
+% TODO compression, utilizing that boundaries are ordered. Simple approach: difference to next boundary
+% probably need to understand section 6.2 of https://research.cyber.ee/~peeter/research/JCS161.pdf
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-graphs}
