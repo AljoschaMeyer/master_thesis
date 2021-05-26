@@ -215,6 +215,8 @@ Let $S \subseteq U$, $\preceq$ a linear order over $U$, and $x, y \in U$.
 The \defined{interval from $x$ to $y$ in $S$}, denoted by $\interval{x}{y}{S}$, is the set $\set{s \in S | x \preceq s \prec y}$. We call $x$ the \defined{lower boundary} and $y$ the \defined{upper boundary} of the interval.
 
 Note that the upper boundary is excluded from the interval, so in particular $\interval{x}{x}{S} = \emptyset$.
+
+TODO allow $y < x$
 \end{definition}
 
 Given a balanced search tree $T$ with root $r$ for a set $S$ that is labeled by $\liftlabel{\f}{\mathcal{M}}$, we can compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ in logarithmic time. Intuitively, one traces paths in $T$ to both $x$ and $y$, and then the result is the sum over all vertices ``in the area between'' these paths. For every vertex on the traced paths, the label of the ``inner'' child vertex summarizes multiple vertices within the area. Summing over all these children yields the value corresponding to the whole inner area. Since the length of the delimiting paths is logarithmic, overall only a logarithmic number of labels needs to be added up.
@@ -344,9 +346,13 @@ For $x, z \in G$ there is $y \in G$ such that $\groupadd{x}{y} = z$, namely $y \
 
 Computing $\lift{\f}{\mathcal{G}}(S)$ consists of repeatedly adding group elements which by themselves are distributed uniformly at random if $S$ was chosen randomly and $\f$ is a high quality hash function. Thus the accumulated value after every step is any given $z \in G$ with probability $\frac{1}{\abs{G}}$, as is in particular the probability for the result being equal to $z$.
 \end{proof}
+
+A more formal proof for xor specifically is given in section 6.2 of \cite{maziarz2021hashing}.
 \end{proposition}
 
 By the same argument, knowing the fingerprint for some set does not provide any information about the fingerprints for sets that differ by even only a single value. In conclusion, high quality fingerprints can be achieved by choosing any transitive and commutative operation for the monoid, for example xor or addition modulo $2^k$, as long as values are mapped into the monoid with a high quality hash function.
+
+While multiplication does not form a group when performed on the numbers in $\interval{0}{2^k}{\N}$, there still are groups based on multiplication modulo some number, e.g. $\Z_n^\ast$, the group yielded by multiplication modulo $n$ on the set $\set{x \in \interval{0}{n}{\N} \mid \text{$x$ is coprime to $n$}}$. In the following, when talking about multiplication, we will assume that the universe is chosen such that multiplication forms a group.
 
 \section{Cryptographically Secure Fingerprints}
 \label{crypto}
@@ -374,11 +380,64 @@ Since $\lift{\f}{\mathcal{M}}(\set{u}) = \f(u)$, $\f$ must necessarily be collis
 
 Whether a hash function is secure is not a binary dichotomy, but depends on what is considered ``feasible'' for an adversary. Greater security can usually be obtained at the cost of longer digests and longer computation times. Before presenting options for secure hash functions, we thus examine the impact of hash collisions first.
 
-We can generally distinguish between malicious actors in two different positions: those who can actively impact the contents of the data structure to be synchronized, and those who passively relay updates and needs to search for a collision within the available data.
+We can generally distinguish between malicious actors in two different positions: those who can actively impact the contents of the data structure to be synchronized, and those who passively relay updates and need to search for a collision within the available data. As a set of size $n$ has $2^n$ subsets, if fingerprints are bit strings of length $k$, then by the pigeonhole principle a fingerprint collision can be found within any set of size at least $k + 1$.
 
-A passive malicious actor 
+An attack against the fingerprinting scheme by an active adversary can involve computing many fingerprints and adding the required items to the set once a collision has been followed. Such an attack is not usable by the passive adversary. We will primarily focus on discussing active adversaries, as they are strictly more powerful than passive ones. Yet it should be kept in mind that passive adversaries can be more common in certain settings, particularly in peer-to-peer systems: if a node is interested in synchronizing a data structure, it probably trusts the source of the data, otherwise it would have little reason expending resources on synchronizing. The data may however be synchronized not with the original source but with completely untrusted nodes. Additionally, an active adversary that does not want to risk detection by adding suspicious items to the data structure is restricted to the operations of a passive adversary.
 
+Fingerprint collisions result in parts of the data structure not being synchronized, so information is being withheld from one or both of the synchronizing nodes. When a malicious node synchronizes with an honest one, the malicious node can withhold arbitrary information by simply pretending not to have certain data, which does not require finding collisions at all.
 
+So cases in which a malicious node can do actual damage are if it supplies data to two different, honest nodes such that these two nodes perform faulty synchronization amongst each other. Specifically: let $\mathcal{M}$ be a malicious node, $\mathcal{A}$ and $\mathcal{B}$ be honest nodes, then a successful attack consists of $\mathcal{M}$ crafting sets $X_A, X_B$ and sending these to $\mathcal{A}$ and $\mathcal{B}$ respectively, so that when $\mathcal{A}$ and $\mathcal{B}$ then run the synchronization protocol, they end up with different data structures. A passive adversary does not craft $X_A, X_B$ but must find them as subsets of some set $X$ supplied by an honest node. As we assume the underlying hash function $\f$ to be secure, at least one non-singleton set has to be involved in a collision.
+
+There are some qualitative arguments that even if an adversary finds a fingerprint collision, the impact is rather low. Let $S_A \subseteq X_A$ and $S_B \subseteq X_B$ be nonequal sets with the same fingerprint. To have any impact on the correctness of a particular protocol run, their two fingerprints need to actually be compared during that protocol. For that to happen, they need to be of the form $\interval{x_A}{y_A}{X_A}$ and $\interval{x_B}{y_B}{X_B}$ respectively. The fingerprints of these intervals can then be compared if one of the nodes sends the fingerprint for the interval $\interval{\min(x_A, x_B)}{\max(y_A, y_B)}{X_i}$. That alone is still not sufficient, as any item within that interval that is not part of the sets would change the fingerprint. So the two intervals actually need to be of the form $\interval{\min(x_A, x_B)}{\max(y_A, y_B)}{X_A}$ and $\interval{\min(x_A, x_B)}{\max(y_A, y_B)}{X_B}$, or simplified: there have to be $x, y \in U$ such that $S_A = \interval{x}{y}{X_A}$ and $S_B = \interval{x}{y}{X_B}$.
+
+If the adversary has found such sets, that is still no guarantee that the interval $\interval{x}{y}{X_i}$ is being compared during the synchronization session of $\mathcal{A}$ and $\mathcal{B}$. For a set containing $n$ items, there are $\frac{n (n + 1)}{2} \in \complexity{n^2}$ possible intervals, but only $\complexity{n}$ are compared in a given protocol run, since the worst-case message complexity is $\complexity{n}$ (see \cref{communication-complexity}). These numbers should only be considered as rough guidelines, they gloss over details such as the fact that there are more intervals containing roughly $\frac{n}{2}$ items then there are intervals containing almost all or almost no items. Yet they demonstrate that finding suitable colliding intervals still does not guarantee that a particular pair of nodes will be affected. In particular, there is no need for $\mathcal{A}$ and $\mathcal{B}$ to choose the interval boundaries that occur in a protocol run deterministically. They can even perform multiple randomized protocol runs in parallel, while keeping track of item transmissions and sending every item at most once across all these protocol runs.
+
+A third factor mitigating the impact of an adversary finding fingerprint collisions is the communication with other, non-colluding nodes. A fourth party could send some $u \in U, x \preceq u \prec y$ to $\mathcal{A}$ or $\mathcal{B}$ before $\mathcal{A}$ and $\mathcal{B}$ synchronize, disrupting the collision.
+
+Finally, in systems where nodes repeatedly synchronize with different other nodes, a single fingerprint collision in a single synchronization session would merely delay propagation of information rather than stop it completely (note that this does not hold for collisions of two singleton sets). Since the attack model requires both $\mathcal{A}$ and $\mathcal{B}$ to synchronize with more than one node in total, this might apply to many affected settings. Peer-to-peer systems communicating on a random overlay network in particular fall into this category. A malicious actor with enough control over the communication of other nodes to guarantee a tangible benefit from fingerprint collisions can likely disrupt operation of the network more effectively by exercising that control then by sabotaging synchronization.
+
+All of these arguments are however purely qualitative and should as such be taken into account with caution, they are not a substitute for quantitative cryptographic analysis. A strong attacker might be able to find many pairs of sets of colliding fingerprints, or many sets that all share the same fingerprint, and none of the above arguments consider these cases.
+
+\subsection{Attacking Specific Monoids}
+
+Multiplication, addition and xor as a way of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
+
+The main observation is that xor is the additive operation in $\mathds{F}_2$, the finite field on two elements $\set{0, 1}$. A fingerprint can be interpreted as a vector $\begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$. The fingerprint of a set $S = \set{s_1, s_2, \ldots, s_n}$ can thus be computed as the sum (within $\mathds{F}_2$, i.e. as the xor) of the vectors corresponding to $s_1, s_2, \ldots, s_n$. The fingerprint of some $S' \subseteq S$ can also be regarded as the sum over all vectors, but each vector being first multiplied with a coefficient of $1$ if $s_i \in S'$ and coefficient $0$ if $s_i \notin S'$. In other words, the fingerprint of $S'$ is a linear combination of the hashes of the items in $S$. 
+
+This enables us to efficiently find subsets whose fingerprint are a particular vector. Let $S = \set{s_1, s_2, \ldots, s_n}$ be a set of items, and let $b = \begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$ be the target fingerprint. For $0 < i \leq n$ define $a_i = \begin{bmatrix}a_{i, 1} & a_{i, 2} & \ldots & a_{i, k}\end{bmatrix} \in \set{0, 1}^{1 \times k}$ to be $\f(s_i)$ interpreted as a vector over $\mathds{F}_2$. The coefficients for linear combinations of the $a_i$ equal to $b$ are the solutions to the following system of linear equations over $\mathds{F}_2$:
+
+\[
+\begin{bmatrix}
+a_{1, 1} & a_{1, 2} & \ldots & a_{1, k}\\
+a_{2, 1} & a_{2, 2} & \ldots & a_{2, k}\\
+\vdots & \vdots & \ddots & \vdots \\
+a_{n, 1} & a_{n, 2} & \ldots & a_{n, k}\\
+\end{bmatrix} \cdot \begin{bmatrix}
+x_1\\
+x_2\\
+\vdots\\
+x_n
+\end{bmatrix} = \begin{bmatrix}
+b_1\\
+b_2\\
+\vdots\\
+b_n
+\end{bmatrix}
+\]
+
+Solutions can be found by gaussian elimination in $\complexity{n^3}$ time, an exponential improvement over brute forcing by computing the fingerprints of all subsets.
+
+As xor admits polynomial-time attacks by solving linear equations, the authors of \cite{bellare1997new} next consider addition and multiplication. They unify parts of their discussion by relating the hardness of finding collisions to solving the balance problem: in a commutative group $(G, \groupaddsym, \neutraladd)$, given a set of group elements $S = \set{s_1, s_2, \ldots, s_n}$, find disjoint, nonempty subsets $S_0 = \set{s_{0, 0}, s_{0, 1}, \ldots, s_{0, k}} \subseteq S, S_1 = \set{s_{1, 0}, s_{1, 1}, \ldots, s_{1, l}} \subseteq S$ such that $s_{0, 0} \groupaddsym s_{0, 1}  \groupaddsym \ldots  \groupaddsym s_{0, k} = s_{1, 0}  \groupaddsym s_{1, 1}  \groupaddsym \ldots  \groupaddsym s_{1, l}$. They then reduce the hardness of the balance problem to other problems.
+
+For addition, the balance problem is as hard as subset sum, which was at the time of publication conjectured to be sufficiently hard. Wagner showed however in \cite{wagner2002generalized} how to solve the balance problem in subexponential time for addition. To give an impression for the impact of this attack, consider \cite{mihajloska2015reviving} which uses addition for combining SHA-3~\cite{dworkin2015sha} digests, producing fingerprints of length between $2688$ and $4160$ or $6528$ to $16512$ bits to achieve security levels of $128$ or $256$ bit respectively against Wagner's attack. \cite{lyubashevsky2005parity} gives an improvement over Wagner's attack finding collisions in $\complexity{2^{n^\epsilon}}$ for arbitrary $\epsilon < 1$, further weakening addition as a choice of monoid operation.
+
+For multiplication, the balance problem is as hard as the discrete logarithm problem in the group. This is a more ``traditional'' hardness assumption than subset sum, there are groups for which no efficient algorithm is known. The main drawback is that multiplication is less efficient to compute that addition. \cite{stanton2010fastad} includes a comparison between the performance of addition and multiplication for incremental hashing, the additive hash outperforms the multiplicative one by two orders of magnitude, even though it uses longer digests to account for Wagner's attack.
+
+For our context in which fingerprints are frequently sent over the network, longer computation time might still be preferable over longer hashes. Fingerprints based on multiplication nevertheless need larger digests than traditional, non-incremental hash functions. \cite{maitin2017elliptic} suggests fingerprints of $3200$ bit to achieve $128$ bit security, and motivated by this uses binary elliptic curves as the underlying group to achieve more compact fingerprints - fingerprints of length $2k$ bits give $\complexity{2^k}$ security.
+
+\cite{bellare1997new} also proposes a fourth monoid based on lattices. \cite{lewi2019securing} give a specific instantiation providing 200 bits of security with fingerprints of size $16 \cdot 1024 = 16384$ bit.
+
+All of these monoid operations are commutative, which our approach to fingerprint computation does not require. A typical associative but not commutative operation is matrix multiplication. A promising hash function based on matrix multiplication was given in \cite{}
 
 
 

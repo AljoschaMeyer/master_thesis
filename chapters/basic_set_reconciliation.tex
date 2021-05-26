@@ -196,6 +196,7 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 \end{figure*}
 
 \subsection{Communication Complexity}
+\label{communication-complexity}
 
 The total number of bits that needs to be transmitted during a protocol run is proportional to the number of vertices in the tree. Every interval fingerprint consists of two items and one fingerprint, so assuming $U$ is finite this lies in $\complexity{1}$. Since there are at most $2n$ vertices in the tree, the interval fingerprints require at most $\complexity{n}$ bits to be communicated.
 
@@ -272,6 +273,8 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 \label{fig:worst-bytes}
 \end{figure*}
 
+TODO impact of boundary randomization
+
 \subsection{Computational Complexity}
 
 We now analyze the computational cost incurred by a single communication round, i.e. computing the response to a message. This includes both fingerprint comparisons as well as locating the items to transmit. We do however assume that an auxiliary data structure is available to help with this computation, e.g. the a fingerprint tree structure presented in \cref{TODO}. We exclude both space usage and maintenance cost for this data structure from the per-round complexity.
@@ -292,6 +295,7 @@ We now give a list of optimizations which do not impact the overall complexity a
 When partitioning an interval into subintervals, the protocol does not specify where exactly to place the boundaries. Splitting into partitions of roughly equal sizes makes a lot of sense if new data could arise anywhere within the linear order with equal probability. Is however the items are likely to fall within certain ranges of the order, it can be more efficient to use more fine-grained partitions within those regions. If for example items are sorted by timestamp, and new items are expected to be propagated to every node in the system within a couple of seconds, then all items older than ten seconds can be comfortably lumped together in a large interval.
 
 \subsection{Subset Checks}
+\label{subset-checks}
 
 When a node $\mathcal{X}_i$ receives an interval fingerprint $\ifp{x}{y}{X_j}$, it might have a different fingerprint for that interval, but one of the resulting subintervals could match the received fingerprint. The node can then ignore that interval, transmitting only the remaining ones.
 
@@ -300,33 +304,31 @@ This scenario is a special case of receiving the fingerprint of a subset of the 
 Computing the fingerprint of all subsets of interval is infeasible since they are $2^n$ many subsets. As discussed in \cref{TODO} however, if the group operation for fingerprint computation is xor, a node can check whether the fingerprint of a subset of items matches a given fingerprint in $\complexity{n^3}$.
 Assuming no fingerprint collisions occurred, checking whether a subset of $\interval{x}{y}{X_i}$ matches $\fp{\interval{x}{y}{X_j}}$ is equivalent to checking whether $\interval{x}{y}{X_i}$ is a superset of $\interval{x}{y}{X_j}$.
 
-This leads to a protocol with a per-round computational complexity of $\complexity{n^3}$ and the same worst-case guarantees, but which can skip recursive steps more often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
+This leads to a protocol with a per-round computational complexity of $\complexity{n^3}$ TODO $n^4$? and the same worst-case guarantees, but which can skip recursive steps more often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
 
 TODO precomputation, see comment %https://piazza.com/class_profile/get_resource/jl30kcwntnn7f1/jlh5nh8gwuh11s
-TODO: this is O(1), not polynomial?
 
 \subsection{Efficiently Encoding Intervals}
 
 A naive encoding of interval fingerprints and interval item sets would transmit both boundaries of every interval, transmitting $2n$ items if there are $n$ intervals in a message. This can be brought down to $1 + n$ by utilizing that the lower boundary of all but the first interval it is also the upper boundary of the preceding one. An efficiently encoded message consists of the number of intervals it contains, followed by the lower boundary of the first interval, followed by pairs of interval information and the upper boundary of the interval that the information pertains to, where each \defined{interval information} is either a fingerprint, a set of items, or a dummy value signaling that this part of the overall interval is already fully synchronized.
 
+The knowledge that interval boundaries are transmitted in ascending order can be used for compression. As a simple example, if interval boundaries are natural numbers, the upper boundaries can be transmitted as the difference to the previous boundary. This way, smaller numbers are transmitted, which admit shorter encodings. The same argument applies for transmitting sets of items in sorted order. TODO point to literature
+
 Note additionally that two adjacent interval item sets can be merged into a single one, saving on the transmission of the boundary between them.
 
 \subsection{Utilizing Interval Boundaries}
 
-Whenever the lower boundary of an interval is transmitted, an item is transmitted. If the receiving node knew whether the other node held this item, it would automatically be reconciled and could be excluded from further recursion steps. One way for achieving this is to tag each interval with a bit to indicate whether the lower boundary is being held by the sender. A different approach is to require that intervals are only split at items which the splitting node holds, this way no explicit bits needs to be transmitted, yet many boundaries can be identified as being held by the other node.
+Whenever the lower boundary of an interval is transmitted, an actual item is transmitted. If the receiving node knew whether the other node held this item, it would automatically be reconciled and could be excluded from further recursion steps. One way for achieving this is to tag each interval with a bit to indicate whether the lower boundary is being held by the sender. A different approach is to require that intervals are only split at items which the splitting node holds, this way no explicit bits needs to be transmitted, yet many boundaries can be identified as being held by the other node.
 
 Recall that we assume $U$ to be finite and with the greatest element $\top$, which never occurs as the lower boundary of an interval. For $x \in U \setminus \{\top\}$ we can thus denote by $\successor{x}$ the unique $z \in U$ such that $x \prec z$ and there exists no $y \in U$ such that $x \prec y \prec z$. When sending or receiving an interval from $x$ to $y$ for which both nodes know that the sending node holds $x$, both nodes act as if the interval went from $\successor{x}$ to $y$, except that the receiving node adds $x$ to its local set of items.
 
 \subsection{Multi-Level Fingerprints}
 
-Since the protocol interprets equal interval fingerprints as both nodes holding the same set of items within the interval but never verifies this merely probabilistic assumption, fingerprints need to be long enough to guarantee low collision probability. The longer the fingerprints, the more bits need to be transmitted however.
+Since the protocol interprets equal interval fingerprints as both nodes holding the same set of items within the interval, but never verifies this merely probabilistic assumption, fingerprints need to be long enough to guarantee low collision probability. The longer the fingerprints, the more bits need to be transmitted however.
 
 One can use smaller fingerprints if in case of equal fingerprints the nodes then exchange an additional fingerprint rather than immediately stopping the recursion for this interval. Whenever a node receives a first-level interval fingerprint that is equal to its own, it answers with the second-level fingerprint for the same interval. When a node receives a second-level interval fingerprint that is equal to its own, it terminates the recursion. If it is not equal, it recurses as usual, in particular it sends first-level fingerprints for any large subintervals.
 
 This scheme can of course be extended to an arbitrary number of fingerprint levels. Every level increases the worst-case number of roundtrips by one, but decreases the average message size. If cryptographically secure fingerprints are desired, low levels of the fingerprint hierarchy do not have to be secure, only the top level fingerprint needs to be so. Alternatively, each fingerprint level can consist of some substring of a long, cryptographically secure fingerprint, such that the concatenation of these substrings yields the original fingerprint.
-
-% TODO compression, utilizing that boundaries are ordered. Simple approach: difference to next boundary
-% probably need to understand section 6.2 of https://research.cyber.ee/~peeter/research/JCS161.pdf
 
 \section{Reconciling Hash Graphs}
 \label{set-reconciliation-graphs}
@@ -341,4 +343,4 @@ Even though arbitrary dags are possible and thus the logarithmically bounded wor
 
 To that end, rather than reconciling merely hashes of objects, we can reconcile pairs $(\mathit{depth}, \mathit{hash})$, sorting by depth first and hash second. The \defined{depth} of an object is the length of the longest path from that object to a root object, i.e. an object without predecessors. That is, the depth of an object is $1$ greater than the greatest depth of any predecessor object. If most concurrent work is based off similarly new state, then it also falls into a similar interval of the linear order. A protocol run does not need to recurse into intervals of low depth then, since no concurrently working peer produces new objects of low depth. If this assumption turns out to be wrong, the protocol nevertheless upholds its worst-case guarantee of a logarithmic number of communication rounds.
 
-Another common scenario is that a node has not produced any new local objects and merely wants to catch up with the current state. Let $d$ be the maximal depth among all objects the node holds. Then rather than reconciling the interval from $(0, 0)$ to $\top$, the node can reconcile the interval from $(0, 0)$ to $(d + 1, 0)$ as well as sending an empty interval item set from $(d + 1, 0)$ to $\top$. All new changes of depth $d + 1$ or greater are then fetched in only two communication rounds. Any concurrent work (from a depth perspective) is reconciled as usual, and if all new changes are based off a recent version, the whole reconciliation process only takes a single round trip.
+Another common scenario is that a node has not produced any new local objects and merely wants to catch up with the current state. Let $d$ be the maximal depth among all objects the node holds. Then rather than reconciling the interval $\interval{(0, 0)}{\top}{}$, the node can reconcile the interval $\interval{(0, 0)}{(d + 1, 0)}{}$ as well as sending an empty interval item set for the interval $\interval{(d + 1, 0)}{\top}{}$. All new changes of depth $d + 1$ or greater are then fetched in only two communication rounds. Any concurrent work (from a depth perspective) is reconciled as usual, and if all new changes are based off a recent version, the whole reconciliation process only takes a single round trip.
