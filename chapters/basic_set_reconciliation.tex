@@ -6,11 +6,12 @@ We define the protocol in \cref{set-reconciliation-def}, prove its correctness i
 \section{Recursive Set Reconciliation}
 \label{set-reconciliation-def}
 
-The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$.
-$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{interval item set}.
-An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a four-tuple $\iis{x}{y}{S}{b}$ for $x, y \in U, S \subseteq \interval{x}{y}{X_i}, b \in \{0, 1\}$. $b$ indicates whether the interval item set is a response to a previous interval item set.
+The set reconciliation protocol assumes that there is a set $U$, a linear order $\preceq$ on $U$, a node $\mathcal{X}_0$ locally holding some $X_0 \subseteq U$, and a node $\mathcal{X}_1$ locally holding $X_1 \subseteq U$. Both nodes are able to compute fingerprints for sets via some function $\fun{\fpname}{\powerset{U}}{D}$. This function could in principle be any hash function, but in the complexity analysis we will assume that it is instantiated as $\lift{\f}{\mathcal{M}}$ with a suitable underlying hash function $f$ and a suitable monoid $\mathcal{M}$ over the universe $D$ (see \cref{def-lift}).
 
-Recall that $\fp{A}$ denotes the fingerprint for $A \subseteq U$, and that $\interval{x}{y}{A} \defeq \{a \in A | x \preceq a \prec y\}$.
+Recall that $\interval{x}{y}{S}$ denotes the set $\set{s \in S \mid x \preceq s \prec y}$ if $x \prec y$, or $S \setminus \interval{y}{x}{S}$ if $y \preceq x$ (\cref{def-interval}).
+
+$\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages over multiple rounds, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{interval item sets}.
+An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a four-tuple $\iis{x}{y}{S}{b}$ for $x, y \in U$, $S \subseteq \interval{x}{y}{X_i}$, and $b \in \{0, 1\}$. $b$ indicates whether the interval item set is a response to a previous interval item set.
 
 When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
 
@@ -87,8 +88,6 @@ In the fourth and final communication round, $\mathcal{X}_0$ receives two interv
 \subsection{Observations}
 
 Partitioning based on a total order allows the nodes to perform a limited form of queries, i.e. range queries. A node can ask for reconciliation within a certain interval, rather than over the whole universe.
-
-If the universe $U$ is finite, the greatest element of the universe cannot be exchanged, since all ranges have an exclusive upper boundary. We will thus assume that for a universe $U$ of interest, nodes are actually using $\tilde{U} \defeq U \mathbin{\dot{\cup}} \top$ with $u \preceq \top$ for all $u \in U$.
 
 If the universe $U$ is not finite, then there are items that require an arbitrary amount of bytes to encode. Since the protocol needs to transmit items to denote interval boundaries, no reasonably complexity guarantees can be given for infinite universes. We will thus assume $U$ to be finite and small enough that items can be reasonably encoded. This assumption is not very restrictive in practice because nodes can always synchronize hashes of items rather than the items themselves. The protocol can then be either followed by a phase where hashes of interest are transferred and anwered by the actual items, or the protocol can be made aware of the distinction and use hashes as interval boundaries while transmitting actual items for interval item sets.
 
@@ -273,6 +272,9 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 \label{fig:worst-bytes}
 \end{figure*}
 
+\subsection{Impact of Randomized Intervals}
+\label{random-boundaries}
+
 TODO impact of boundary randomization
 
 \subsection{Computational Complexity}
@@ -320,7 +322,7 @@ Note additionally that two adjacent interval item sets can be merged into a sing
 
 Whenever the lower boundary of an interval is transmitted, an actual item is transmitted. If the receiving node knew whether the other node held this item, it would automatically be reconciled and could be excluded from further recursion steps. One way for achieving this is to tag each interval with a bit to indicate whether the lower boundary is being held by the sender. A different approach is to require that intervals are only split at items which the splitting node holds, this way no explicit bits needs to be transmitted, yet many boundaries can be identified as being held by the other node.
 
-Recall that we assume $U$ to be finite and with the greatest element $\top$, which never occurs as the lower boundary of an interval. For $x \in U \setminus \{\top\}$ we can thus denote by $\successor{x}$ the unique $z \in U$ such that $x \prec z$ and there exists no $y \in U$ such that $x \prec y \prec z$. When sending or receiving an interval from $x$ to $y$ for which both nodes know that the sending node holds $x$, both nodes act as if the interval went from $\successor{x}$ to $y$, except that the receiving node adds $x$ to its local set of items.
+Recall that we assume $U$ to be finite. For $x \in U$ we can thus denote by $\successor{x}$ the necessarily unique $z \in U$ such that $x \prec z$ and there exists no $y \in U$ such that $x \prec y \prec z$ if a $z$ with $u \prec z$ exists, or $\min(U)$ otherwise. When sending or receiving an interval from $x$ to $y$ for which both nodes know that the sending node holds $x$, both nodes act as if the interval went from $\successor{x}$ to $y$, except that the receiving node adds $x$ to its local set of items.
 
 \subsection{Multi-Level Fingerprints}
 

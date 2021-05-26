@@ -125,15 +125,13 @@
 \newcommand{\interval}[3]{[{#1},{#2})_{#3}}
 \newcommand{\intervalx}[3]{({#1},{#2})_{#3}}
 \newcommand{\fp}[1]{\operatorname{fp}(#1)}
+\newcommand{\fpname}[0]{\operatorname{fp}}
 \newcommand{\ifpmanual}[3]{({#1}, {#2}, {#3})}
 \newcommand{\ifp}[3]{\ifpmanual{#1}{#2}{\fp{\interval{#1}{#2}{#3}}}}
-\newcommand{\iis}[4]{({#1}, {#2}, {#3})_{#4}}
+\newcommand{\iis}[4]{({#1}, {#2}, {#3}, {#4})}
 \newcommand{\iisnatural}[4]{({#1}, {#2}, \interval{#1}{#2}{#3}{#4})}
 \newcommand{\ifpempty}[2]{({#1}, {#2})}
 \newcommand{\ifpsingle}[2]{\ifpmanual{#1}{#2}{\emptyset}}
 \newcommand{\ifpcontain}[3]{\ifpmanual{#1}{#2}{\groupadd{\fp{x}}{#3}}}
 
 \newcommand{\successor}[1]{\operatorname{successor({#1})}}
-
-\newcommand{\fpsize}[0]{s_{fp}}
-\newcommand{\itemsize}[0]{s_{item}}
