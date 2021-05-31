@@ -102,11 +102,11 @@ We call $(U, \groupaddsym, \neutraladd)$ a \defined{monoid} if it satisfies two 
 \label{def-lift}
 Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\fun{\f}{U}{M}$.
 
-We \defined{lift $\f$ to finite sets via $\mathcal{M}$} to obtain $\fun{\lift{\f}{\mathcal{M}}}{\powerset{U}}{M}$ with:
+We \defined{lift $\f$ to finite sets via $\mathcal{M}$} to obtain $\partialfun{\lift{\f}{\mathcal{M}}}{\powerset{U}}{M}$ with:
 
 \begin{align*}
 \lift{\f}{\mathcal{M}}(\emptyset) &\defeq \mymathbb{0}\\
-\lift{\f}{\mathcal{M}}(S) &\defeq \f(\min_{\preceq}(S)) \oplus \lift{\f}{\mathcal{U}}(S \setminus \min_{\preceq}(S))\\
+\lift{\f}{\mathcal{M}}(S) &\defeq \f(\set{\min(S)}) \oplus \lift{\f}{\mathcal{U}}(S \setminus \set{\min(S)})\\
 \end{align*}
 
 In other words, if $S = \set{s_0, s_1, \ldots, s_{\abs{S} - 1}}$ with $s_0 \prec s_1 \prec \ldots \prec s_{\abs{S} - 1}$, then $\lift{\f}{\mathcal{M}}(S) = \groupadd{\f(s_0)}{\groupadd{\f(s_1)}{\groupadd{\ldots}{\f(s_{\abs{S} - 1})}}}$.
@@ -323,6 +323,91 @@ intervalFingerprint v x y = case findInitial v x y of
     Just (Inner l v' r _) -> -(sumLt l x) + (f v') + (sumLt r y)
 \end{minted}
 
+\subsection{Differences to Homomorphic Hashing}
+
+The construction of lifting a function to sets resembles that of multiset homomorphic hash functions, introduced in \cite{clarke2003incremental}, with further instantiations given in \cite{cathalo2009comparing} and \cite{maitin2017elliptic}. We briefly define multiset homomorphic hashing in order to point out salient differences to our construction.
+
+\begin{definition}
+Let $\mathcal{U}_0 \defeq (U_0, \groupaddsym_0, \neutraladd_0)$ and $\mathcal{U}_1 \defeq (U_1, \groupaddsym_1, \neutraladd_1)$ be monoids and let $\fun{f}{U_0}{U_1}$.
+
+We call $\f$ a \defined{monoid homomorphism from $\mathcal{U}_0$ to $\mathcal{U}_1$} if it satisfies two properties:
+
+\begin{description}
+  \item[preserves operation:] for all $x, y \in U_0$: $\f(x \groupaddsym_0 y) = \f(x) \groupaddsym_1 \f(y)$
+  \item[preserves neutral element:] $f(\neutraladd_0) = \neutraladd_1$
+\end{description}
+
+The second property directly follows from the first one by considering the cases $x \defeq \neutraladd_0$ and $y \defeq \neutraladd_0$.
+\end{definition}
+
+\begin{definition}
+Let $\mathcal{S} \defeq (\N^U, \cup, \emptyset)$ be the monoid of multisets over the universe $U$ under union, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\fun{\f}{\N^U}{M}$.
+
+We call $\f$ a \defined{multiset homomorphic hash function} if $\f$ is a hash function and a monoid homomorphism from $\mathcal{S}$ to $\mathcal{M}$.
+\end{definition}
+
+A multiset homomorphic hash function allows incrementally maintaining the hash of a multiset under insertions using only $\complexity{1}$ storage space, by storing the hash of the multiset and combining it with the hash of any inserted item. This can be generalized to support deletions as well: by allowing negative multiplicities for multiset items, multisets form a group under union. If the hash function is a group homomorphism, the hash of the multiset can be updated on deletion by subtracting the hash of the deleted item.
+
+This is more efficient than our approach, which requires $\complexity{n}$ space for the tree structure. This efficiency comes however at the cost of loss of flexibility. As multiset union is commutative, so must be the homomorphic monoid/group of fingerprints. Since our protocols require the ability to compute fingerprints over arbitrary intervals and we need $\complexity{n}$ to do so anyways, homomorphic hashing would not yield any space usage benefits, and we thus choose the approach that does not require commutativity.
+
+We additionally want to explicitly work with regular sets, not multisets. The reason why homomorphic hashes operate on multisets is that they admit more natural homomorphisms under union. For example, taking the size of a multiset is a homomorphism into the additive monoid on the natural numbers, whereas this is not true for regular sets, as e.g. $\abs{\set{x, y} \cup \set{y, z}} \neq \abs{\set{x, y}} + \abs{\set{y, z}}$. Set union is however a well behaved with respect to taking the size of the sets as it is a disjoint union, i.e. no item occurs in both sets.
+
+For an algebraic-flavored characterization of our fingerprint functions, we thus need to account for items occurring on both sides of the union. This alone still would not change that the resulting concept would necessarily require a commutative monoid, so we must also restrict possible inputs to be sorted. This leads to the following definition:
+
+\begin{definition}
+Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\partialfun{\f}{\powerset{U}}{M}$ a partial function mapping all finite subsets of $U$ into $M$.
+
+We call $\f$ a \defined{\somewhatmorphism} if for all finite sets $S_0, S_1 \in \powerset{U}$ such that $\max(S_0) \prec \min(S_1)$: $\f(S_0 \cup S_1) = \groupadd{\f(S_0)}{\f(S_1)}$.
+\end{definition}
+
+This definition captures exactly the functions of form $\lift{\f}{\mathcal{M}}$, as shown in the following propositions:
+
+\begin{proposition}
+Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\fun{\f}{U}{M}$.
+
+Then $\lift{\f}{\mathcal{M}}$ is a \somewhatmorphism.
+
+\begin{proof}
+Let $S_0, S_1 \in \powerset{U}$ be finite sets such that $\max(S_0) \prec \min(S_1)$. Then:
+
+\begin{align*}
+\lift{\f}{\mathcal{M}}(S_0 \cup S_1) &= \biggroupadd_{\substack{s_i \in S_0 \cup S_1,\\ \text{ascending}}} \f(s_i)\\
+&= \biggroupadd_{\substack{s_i \in S_0,\\ \text{ascending}}} \f(s_i) \groupaddsym \biggroupadd_{\substack{s_i \in S_1,\\ \text{ascending}}} \f(s_i)\\
+&= \lift{\f}{\mathcal{M}}(S_0) \groupaddsym \lift{\f}{\mathcal{M}}(S_1)\\
+\end{align*}
+\end{proof}
+\end{proposition}
+
+\begin{proposition}
+Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\partialfun{\g}{\powerset{U}}{M}$ a \somewhatmorphism.
+
+Then there exists $\fun{\f}{U}{M}$ such that $\g = \lift{\f}{\mathcal{M}}$.
+
+\begin{proof}
+Define $\fun{\f}{U}{M}$ as $\f(u) \defeq \g(\set{u})$. We show by induction on the size of $S \subseteq U$ that $\g(S) = \lift{f}{\mathcal{M}}(S)$.
+
+\vspace{10pt}
+
+\textbf{IB:} If $S = \emptyset$, then $\g(S) = \neutraladd = \lift{\f}{\mathcal{M}}(S)$. Suppose that $\g(\emptyset) \neq \neutraladd$, this would contradict the fact that for all $x \in U$ we have $\g(\set{x}) = \g(\set{x}) \groupaddsym \g(\emptyset) = \g(\emptyset) \groupaddsym \g(\set{x})$, which holds because $\set{x} = \set{x} \cup \emptyset = \emptyset \cup \set{x}$ and $\g$ is a \somewhatmorphism.
+
+If $S = \set{x}$, then $\g(S) = \f(x) = \lift{\f}{\mathcal{M}}(S)$.
+
+\textbf{IH:} For all sets $T$ with $\abs{T} = n$ it holds that $\g(T) = \lift{\f}{\mathcal{M}}(T)$.
+
+\textbf{IS:} Let $S \subseteq U$ with $\abs{S} = n + 1$, then:
+
+\begin{align*}
+\g(S) &= \g(\set{\min(S)}) \groupaddsym \g(S \setminus \set{\min(S)})\\
+&\overset{\text{IH}}= \g(\set{\min(S)}) \groupaddsym \lift{\f}{\mathcal{M}}(S \setminus \set{\min(S)})\\
+&= \f(\min(S)) \groupaddsym \lift{\f}{\mathcal{M}}(S \setminus \set{\min(S)})\\
+&= \lift{\f}{\mathcal{M}}(S)\\
+\end{align*}
+
+\vspace{10pt}
+As $\g$ is only defined over finite inputs, we thus have $\g = \lift{\f}{\mathcal{M}}$.
+\end{proof}
+\end{proposition}
+
 \section{Monoidal Fingerprints}
 \label{collisions}
 
@@ -403,7 +488,7 @@ All of these arguments are however purely qualitative and should as such be take
 
 In a system with a consensus mechanism among all participating nodes, the choice of $\f$ can periodically be changed, with the frequency being some function of the time it takes to find a viable collision, the cost of rebuilding all auxiliary data structures, and the general level of paranoia among the participating nodes. The $\complexity{n}$ cost of rebuilding the data structures is then being amortized over the number of synchronization sessions occurring between rebuilds, which is still an improvement over protocols that need to perform $\complexity{n}$ computations per synchronization session.
 
-\subsection{Attacking Specific Monoids}
+\subsection{Specific Monoids}
 
 Multiplication, addition and xor as a way of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
 

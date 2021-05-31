@@ -40,6 +40,7 @@
 \newcommand{\abs}[1]{|{#1}|}
 
 \newcommand{\fun}[3]{{#1}: {#2} \rightarrow {#3}}
+\newcommand{\partialfun}[3]{{#1}: {#2} \rightharpoonup{#3}}
 \newcommand{\set}[1]{\{#1\}}
 \newcommand{\disjointunion}[2]{{#1} \dot{\cup} {#2}}
 \newcommand{\powerset}[1]{\mathcal{P}({#1})}
@@ -224,7 +225,7 @@ local/.style={
 \setbeamercolor{alerted text}{fg=cPurple}
 
 \setbeamertemplate{footline}{%
-      \raisebox{8pt}{\makebox[\paperwidth]{\scriptsize \hspace{5pt}  Recursive Set Reconcilliation \hfill \insertframenumber \hspace{5pt}}}}
+      \raisebox{8pt}{\makebox[\paperwidth]{\scriptsize \hspace{5pt}  Recursive Set Reconcilliation \hfill \insertframenumber/\inserttotalframenumber \hspace{5pt}}}}
 
 \beamertemplatenavigationsymbolsempty
 
@@ -267,12 +268,12 @@ local/.style={
 \end{frame}
 
 \begin{frame}{Basic Ideas}
-\textbf{Divide and conquer}: Let $X_0, X_1$ be sets with $X_0 = \disjointunion{A_0}{B_0}$ and $X_1 = \disjointunion{A_1}{B_1}$, then $X_0 \cup X_1 = (A_0 \cup B_0) \cup (A_1 \cup B_1)$.
+\textbf{Fingerprints}: Map sets into $\set{0, 1}^k$ with low probability of collisions. Compare fingerprints for efficient probabilistic equality check.
 
 \pause
 \vspace{24pt}
 
-\textbf{Fingerprints}: Map sets into $\{0, 1\}^{\ast}$ with low probability of collisions. 
+\textbf{Divide and conquer}: Let $X_0, X_1$ be sets with $X_0 = \disjointunion{A_0}{B_0}$ and $X_1 = \disjointunion{A_1}{B_1}$, then $X_0 \cup X_1 = (A_0 \cup B_0) \cup (A_1 \cup B_1)$.
 \end{frame}
 
 \begin{frame}{Example Protocol Run}
@@ -387,7 +388,7 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 \end{tikzpicture}
 \end{frame}
 
-\begin{frame}{A \textit{Different} Worst-Case Run}
+\begin{frame}{A Different Kind of Worst-Case Run}
 $X_0 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \exampleg, \exampleh \}$
 \hfill
 $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh \}$
@@ -430,6 +431,134 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -1) -- (-8, -1);
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -2) -- (8, -2);
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, -3) -- (-8, -3);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{frame}
+
+\begin{frame}{Toward Suitable Fingerprints}
+\vphantom{$((((\hexamplea \groupaddsym \hexampleb) \groupaddsym \hexamplec) \groupaddsym \hexampled) \groupaddsym \hexamplee) \groupaddsym \hexamplef$}\only<1>{$((((\hexamplea \groupaddsym \hexampleb) \groupaddsym \hexamplec) \groupaddsym \hexampled) \groupaddsym \hexamplee) \groupaddsym \hexamplef$}
+\pause
+\vspace{-0.5cm}
+\begin{tikzpicture}[xscale=0.78, yscale=1.0]
+        %\path[boundingBox] (-7,-3.5) rectangle (7,2);
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroota) at (0, 1) {\exampled};
+
+		\node (v00a) at (-4, -0) {\exampleb};
+		\node (v01a) at (4, -0) {\examplef};
+
+                \node (v10a) at (-6, -1) {\examplea};
+                \node (v11a) at (-2, -1) {\examplec};
+                \node (v12a) at (2, -1) {\examplee};
+                                
+		%edges
+                \draw (vroota) edge[edge] (v00a);
+                \draw (vroota) edge[edge] (v01a);
+
+		\draw (v00a) edge[edge] (v10a);
+		\draw (v00a) edge[edge] (v11a);
+		\draw (v01a) edge[edge] (v12a);
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+\vphantom{X}\only<4>{$(((\hexamplea \groupaddsym \hexampleb) \groupaddsym \hexamplec) \groupaddsym \hexampled) \groupaddsym (\hexamplee \groupaddsym \hexamplef)$}
+\pause
+
+\begin{tikzpicture}[xscale=0.78, yscale=1.0]
+        %\path[boundingBox] (-7,-3.5) rectangle (7,2);
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroota) at (0, 1) {\examplec};
+
+		\node (v00a) at (-4, -0) {\exampleb};
+		\node (v01a) at (4, -0) {\examplee};
+
+                \node (v10a) at (-6, -1) {\examplea};
+                \node (v11a) at (2, -1) {\exampled};
+                \node (v12a) at (6, -1) {\examplef};
+                                
+		%edges
+                \draw (vroota) edge[edge] (v00a);
+                \draw (vroota) edge[edge] (v01a);
+
+		\draw (v00a) edge[edge] (v10a);
+		\draw (v01a) edge[edge] (v11a);
+		\draw (v01a) edge[edge] (v12a);
+	\end{pgfonlayer}
+\end{tikzpicture}
+
+\vphantom{X}\only<4>{$((\hexamplea \groupaddsym \hexampleb) \groupaddsym \hexamplec) \groupaddsym ((\hexampled \groupaddsym \hexamplee) \groupaddsym \hexamplef)$}
+\end{frame}
+
+\begin{frame}{Monoidal Fingerprints}
+\begin{definition}
+Let $M$ be a set, $\groupaddsym: M \times M \rightarrow U$, and $\neutraladd \in M$.
+
+We call $(U, \groupaddsym, \neutraladd)$ a \defined{monoid} if it satisfies two properties:
+
+  \begin{description}
+    \item[associativity:] for all $x, y, z \in M$: $\groupadd{(\groupadd{x}{y})}{z} = \groupadd{x}{\groupadd{y}{z}}$
+    \item[neutral element:] for all $x \in M$: $\groupadd{\neutraladd}{x} = x = \groupadd{x}{\neutraladd}$.
+  \end{description}
+\end{definition}
+
+\pause
+
+\begin{definition}
+\label{def-lift}
+Let $U$ be a set, $\preceq$ a linear order on $U$, $\mathcal{M} \defeq (M, \groupaddsym, \neutraladd)$ a monoid, and $\fun{\f}{U}{M}$.
+
+We \defined{lift $\f$ to finite sets via $\mathcal{M}$} to obtain $\partialfun{\lift{\f}{\mathcal{M}}}{\powerset{U}}{M}$ with:
+
+\vspace{-1.0cm}
+\begin{align*}
+\lift{\f}{\mathcal{M}}(\emptyset) &\defeq \mymathbb{0}\\
+\lift{\f}{\mathcal{M}}(S) &\defeq \f(\set{\min(S)}) \oplus \lift{\f}{\mathcal{U}}(S \setminus \set{\min(S)})\\
+\end{align*}
+\end{definition}
+\end{frame}
+
+\begin{frame}{Example Tree}
+\begin{tikzpicture}[xscale=0.78, yscale=1.0]
+\path[boundingBox] (-7, -4) rectangle (7,2);
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroot) at (0, 1) [aux] {\aux{\exampled}{
+\groupadd{
+    (\groupadd{\hexamplea}{\groupadd{\hexampleb}{\hexamplec)}}}
+{\groupadd{\hexampled}
+{(\groupadd{\hexamplee}{\groupadd{\hexamplef}{\hexampleg}})}
+}
+}};
+
+		\node (v00) at (-4, -1) [aux] {\aux{\exampleb}{\groupadd{\hexamplea}{\groupadd{\hexampleb}{\hexamplec}}}};
+		\node (v01) at (4, -1) [aux] {\aux{\examplef}{\groupadd{\hexamplee}{\groupadd{\hexamplef}{\hexampleg}}}};
+
+                \node (v10) at (-6, -3) [aux] {\aux{\examplea}{\hexamplea}};
+                \node (v11) at (-2, -3) [aux] {\aux{\examplec}{\hexamplec}};
+                \node (v12) at (2, -3) [aux] {\aux{\examplee}{\hexamplee}};
+                \node (v13) at (6, -3) [aux] {\aux{\exampleg}{\hexampleg}};
+		%edges
+                \draw (vroot) edge[edge] (v00);
+                \draw (vroot) edge[edge] (v01);
+
+		\draw (v00) edge[edge] (v10);
+		\draw (v00) edge[edge] (v11);
+		\draw (v01) edge[edge] (v12);
+		\draw (v01) edge[edge] (v13);
 	\end{pgfonlayer}
 \end{tikzpicture}
 \end{frame}

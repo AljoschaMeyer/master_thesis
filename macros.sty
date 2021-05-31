@@ -19,6 +19,7 @@
 \newcommand{\neutraladd}[0]{\mymathbb{0}}
 
 \newcommand{\groupaddsym}[0]{\oplus}
+\newcommand{\biggroupadd}[0]{\bigoplus}
 \newcommand{\groupadd}[2]{{#1} \groupaddsym {#2}}
 \newcommand{\groupsubtract}[2]{{#1} \ominus {#2}}
 \newcommand{\inverseadd}[1]{-{#1}}
@@ -26,6 +27,7 @@
 \newcommand{\abs}[1]{|{#1}|}
 
 \newcommand{\fun}[3]{{#1}: {#2} \rightarrow {#3}}
+\newcommand{\partialfun}[3]{{#1}: {#2} \rightharpoonup{#3}}
 \newcommand{\set}[1]{\{#1\}}
 \newcommand{\disjointunion}[2]{{#1} \dot{\cup} {#2}}
 \newcommand{\powerset}[1]{\mathcal{P}({#1})}
@@ -116,11 +118,13 @@
 \DeclareMathOperator{\enc}{enc}
 \DeclareMathOperator{\h}{h}
 \DeclareMathOperator{\f}{f}
+\DeclareMathOperator{\g}{g}
 \DeclareMathOperator{\V}{V}
 \DeclareMathOperator{\xor}{xor}
 
 \newcommand{\lift}[2]{\operatorname{lift_{#1}^{#2}}}
 \newcommand{\liftlabel}[2]{\operatorname{label_{#1}^{#2}}}
+\newcommand{\somewhatmorphism}[0]{set union somewhatmorphism}
 
 \newcommand{\interval}[3]{[{#1},{#2})_{#3}}
 \newcommand{\intervalx}[3]{({#1},{#2})_{#3}}
