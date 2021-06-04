@@ -1,19 +1,10 @@
 % !TEX root = ../main.tex
 
 The protocols we will discuss work by recursively computing and comparing fingerprints of sets.
-This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions.
+This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}.
 
 %TODO: move the following definitions to where they are needed
-%
-%\begin{definition}
-%Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids and let $fun{f}{U_0}{U_1}$. We call $\f$ a \defined{monoid homomorphism} if it satisfies two properties:
-%
-%\begin{description}
-%  \item[preserves operation:] for all $x, y \in U_0$: $\f(x \groupaddsym_0 y) = \f(x) \groupaddsym_1 \f(y)$
-%  \item[preserves neutral element:] $f(\neutraladd_0) = \neutraladd_1$
-%\end{description}
-%\end{definition}
-%
+
 %\begin{definition}
 %Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids. The \defined{direct product of $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_)$} is the monoid $(U_0 \times U_1, \f, (\neutraladd_0, \neutraladd_1))$ with $\f((u_0, u_1), (v_0, v_1)) \defeq (u_0 \groupaddsym_0 v_0, u_1 \groupaddsym_1 v_1)$.
 %\end{definition}
@@ -55,7 +46,6 @@ Let $v \in V$, then $T_v$ denotes the subtree of $T$ with root $v$.
 
 $T$ is a \defined{binary search tree on V} if for all inner vertices $v$ with left child $a$ and right child $b$: $a' \prec v$ for all $a' \in T_a$ and $v \prec b'$ for all $b' \in T_b$.
 
-
 \end{definition}
 
 \begin{definition}
@@ -68,19 +58,11 @@ In the context of fingerprinting, balanced trees often take the form of Merkle t
 
 When inserting or removing an item, the number of labels that need updating is proportional to the length of of the path from the root to the item, so in a balanced tree of $n$ items $\complexity{\mathit{log}(n)}$. The problem with this approach however is that fingerprints are no longer unique: there are different balanced search trees storing the same items set, and different tree arrangements result in different root labels.
 
-Unfortunately it does not suffice to specify a particular balancing scheme, since different insertion orders of the same overall set of items can result in different trees, even when using the same balancing scheme. While this is sufficient for a setting in which only a single machine updates the set and all other machines apply updates in the same order, as assumed e.g. in~\cite{nissim1998certificate}, we aim for a less restrictive setting in which the evolution of the local set does not influence synchronization.
+Unfortunately it does not suffice to specify a particular balancing scheme, since different insertion orders of the same overall set of items can result in different trees, even when using the same balancing scheme. While this is sufficient for a setting in which only a single machine updates the set and all other machines apply updates in the same order, as assumed e.g. in~\cite{naor2000certificate}, we aim for a less restrictive setting in which the evolution of the local set does not influence synchronization.
 
 An alternative would be to define exactly one valid tree shape for any set of items, but this precludes logarithmic time complexity of updates, as \cite{uniquerepresentation} shows that search, insertion and deletion in such trees take at least $\complexity{\sqrt{n}}$ time in the worst case.
 
-We will inspect two options for cheating this lower bound and to achieve logarithmic complexity: utilizing randomization to define a unique tree layout which allows logarithmic operations with high probability, which we examine in \cref{randomization}, or letting the fingerprint function abstract over the tree shape, downgrading it to an implementation detail, which we examine in \cref{group-fingerprints} and beyond.
-
-\section{Pseudorandom Data Structures}
-\label{randomization}
-
-TODO: hash tries, possibly skip lists
-
-% tarjan set equality testing https://apps.dtic.mil/sti/pdfs/ADA223643.pdf
-% pugh function caching data structures http://matthewhammer.org/courses/csci7000-s17/readings/Pugh89.pdf
+We will inspect two options for cheating this lower bound and to achieve logarithmic complexity: letting the fingerprint function abstract over the tree shape, downgrading it to an implementation detail, which we examine in \cref{group-fingerprints} to \cref{crypto}, or utilizing randomization to define a unique tree layout which allows logarithmic operations with high probability, which we examine in \cref{randomization}.
 
 \section{Incremental Computations}
 \label{group-fingerprints}
@@ -207,6 +189,7 @@ Note that the exact shape of the tree determines the grouping of how to apply $\
 If $U$ is small enough that space usage of $\complexity{\abs{U}}$ is acceptable, an implicit tree representation such as a binary indexed tree (Fenwick tree)~\cite{fenwick1994new} can be used. Array positions that correspond to some $u \in U \setminus S$ are simply filled with a dummy value whose hash is defined to be $\neutraladd$.
 
 \subsection{Subsets}
+\label{subsets-associative}
 
 In addition to incremental computation of the fingerprint of a given set, the reconciliation protocol also requires the efficient computation of the fingerprints of arbitrary intervals of the given set. We first fix some terminology and notation:
 
@@ -223,27 +206,41 @@ In the remainder of this section, we assume that for all intervals $\interval{x}
 
 Given a balanced search tree $T$ with root $r$ for a set $S$ that is labeled by $\liftlabel{\f}{\mathcal{M}}$, we can compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ in logarithmic time. Intuitively, one traces paths in $T$ to both $x$ and $y$, and then the result is the sum over all vertices ``in the area between'' these paths. For every vertex on the traced paths, the label of the ``inner'' child vertex summarizes multiple vertices within the area. Summing over all these children yields the value corresponding to the whole inner area. Since the length of the delimiting paths is logarithmic, overall only a logarithmic number of labels needs to be added up.
 
-\Cref{listing:subset-fingerprint} gives a precise definition of how to compute $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$ as Haskell~98~\cite{jones2003haskell} code, for clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child. These can be handled with almost the same algorithm by acting as if these nodes had a second child labeled with $\neutraladd$.
+We now give a precise definition of this algorithm, defining it via Haskell~98~\cite{jones2003haskell} code, not necessarily because it is executable, but mostly to have a typed mathematic notation. For clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child. These can be handled with almost the same algorithm by acting as if these nodes had a second child which contributes \texttt{emptyFingerprint} to any application of \texttt{combine}.
 
-\begin{listing}
-\begin{minted}[linenos, mathescape]{haskell}
--- $\mathtt{U}$ is the type of items, $\mathtt{D}$ the type of fingerprints.
+We start by specifying the types involved in the computation, being slightly more general than currently necessary so that the algorithm can later be reused for certain non-monoidal fingerprinting schemes:
+
+\begin{minted}[mathescape]{haskell}
+-- $\mathtt{U}$ is the type of items, $\mathtt{D}$ the codomain of the hash function.
+hash :: U -> D
+
+-- For now, the set of fingerprints is identical to the set of hashes.
+type Fingerprint = D
+
+-- The fingerprint of the empty set, for now the neutral element.
+emptyFp :: Fingerprint
+emptyFp = 0
+
+-- Combine three fingerprints into a new fingerprint.
+combine :: Fingerprint -> Fingerprint -> Fingerprint -> Fingerprint
+combine a b c = a + b + c
+
+-- Convert a hash to a fingerprint, for now the identity function.
+liftFp :: D -> Fingerprint
+liftFp d = d
+
 -- A node is either a leaf or an inner vertex.
 data Node = Leaf U D | Inner Node U Node D
 
--- Extracts the label of a node.
+-- Extract the label of a node.
 label :: Node -> D
 label Leaf _ fp      = fp
 label Inner _ _ _ fp = fp
+\end{minted}
 
--- Compute the fingerprint over all items stored in $v$
--- within the interval $\interval{x}{y}{S}$, assuming $x \prec y$.
-intervalFingerprint :: Node -> U -> U -> D
-intervalFingerprint v x y = case findInitial v x y of
-    Nothing               -> 0
-    Just (Leaf _ fp)      -> fp
-    Just (Inner l v' r _) -> (sumGeq l x) + (f v') + (sumLt r y)
-                                           
+The algorithm proceeds by first finding the vertex $v$ with the smallest distance to the root such that $x \preceq v \prec y$. This might be $r$ itself.
+
+\begin{minted}[mathescape]{haskell}
 -- Find the node within $\interval{x}{y}{S}$ that is closest to the root,
 -- assuming $x \prec y$.
 findInitial :: Node -> U -> U -> Maybe Node
@@ -254,32 +251,9 @@ findInitial (Inner l v r _) x y
     | v < x           = findInitial r x y
     | v >= y          = findInitial l x y
     | otherwise       = Just v
-
--- Sum up the fingerprints of all items in the given tree
--- which are greater than or equal to $x$.
-sumGeq :: Node -> U -> D
-sumGeq (Leaf v fp) x
-    | v < x     = 0
-    | otherwise = fp
-sumGeq (Inner l v r _) x
-    | v < x     = sumGeq r x
-    | otherwise = (sumGeq l x) + (f v) + (label r)
-
--- Sum up the fingerprints of all items in the given tree
--- which are strictly less than $y$.
-sumLt :: Node -> U -> D
-sumLt (Leaf v fp) y
-    | v >= y    = 0
-    | otherwise = fp
-sumLt (Inner l v r _) y
-    | v >= y    = sumLt l y
-    | otherwise = (label l) + (f v) + (sumLt r y)
 \end{minted}
-\caption{Computing $\interval{x}{y}{S}$ from the complete labeled search tree of $S$.}
-\label{listing:subset-fingerprint}
-\end{listing}
 
-The algorithm proceeds by first finding the vertex $v$ with the smallest distance to the root such that $x \preceq v \prec y$. This might be $r$ itself. If there is no such $v$, then $\interval{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \neutraladd$. All vertices of $T$ that are not vertices in $T_v$ are either greater than or equal to $y$ if $v \prec x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$.
+If there is no such $v$, then $\interval{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \neutraladd$. If however there is such a $v$ then all vertices of $T$ that are not vertices in $T_v$ are either greater than or equal to $y$ if $v \prec x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S})$.
 
 If $v$ is a leaf, $\interval{x}{y}{S} = \set{v}$ and thus $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \f(v)$. Otherwise, let $c_{<}$ be the left child of $v$ and let $c_{>}$ be the right child. Since all vertices in $T_{c_{>}}$ are greater than $v$, they are in particular greater than $x$. Analogously all vertices in $T_{c_{<}}$ are less than $y$.
 
@@ -291,13 +265,48 @@ Keeping in mind that $\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})}$ simply d
 \lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) &= \groupadd{\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})}{\groupadd{\f(v)}{\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})}}\\
 \end{align*}
 
-Proving that \texttt{sumGeq} from \cref{listing:subset-fingerprint} does indeed sum over all $\f(v)$ in the given tree with $x \preceq v$, i.e. computes $\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be done by a rather technical but straightforward induction which we omit, same for \texttt{sumLt} computing $\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})$.
+\begin{minted}[mathescape]{haskell}
+-- Compute the fingerprint over all items stored in $v$
+-- within the interval $\interval{x}{y}{S}$, assuming $x \prec y$.
+intervalFingerprint :: Node -> U -> U -> Fingerprint
+intervalFingerprint v x y = case findInitial v x y of
+    Nothing               -> emptyFp
+    Just (Leaf _ fp)      -> liftFp 'sfp
+    Just (Inner l v' r _) -> combine
+                                (accGeq l x) -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid x \preceq u})$ 
+                                (liftFp (hash v')) -- \f(v')
+                                (accLt r y)  -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid u \prec y})$ 
+\end{minted}
 
-From those facts, correctness of \texttt{intervalFingerprintGroup} follows by the previous arguments.
+$\lift{\f}{\mathcal{M}}(\interval{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be computed by traversing from $c_{<}$ to $x$, summing over those vertices along the path that are greater or equal to $x$, as well as the right children of all vertices along the path. Correctness follows from a rather technical but straightforward induction we omit.
 
-The worst-case running time occurs when the vertex $v$ with the smallest distance to $r$ such that $x \preceq v \prec y$ is $r$ itself, since then both \texttt{sumGeq} and \texttt{sumLt} perform a traversal to a leaf of maximal length. Since $T$ is balanced, only a logarithmic number of recursive calls is executed. Assuming $\f$ can be computed in $\complexity{1}$, the resulting time complexity is in $\complexity{\log(\abs{S})}$.
+\begin{minted}[mathescape]{haskell}
+-- Sum up the fingerprints of all items in the given tree
+-- which are greater than or equal to $x$.
+accGeq :: Node -> U -> Fingerprint
+accGeq (Leaf v fp) x
+    | v < x     = emptyFp
+    | otherwise = liftFp fp
+accGeq (Inner l v r _) x
+    | v < x     = accGeq r x
+    | otherwise = combine (accGeq l x) (liftFp (hash v)) (label r)
+\end{minted}
 
-A slightly simpler approach can be taken if $M$ has efficiently computable inverses with respect to $\groupaddsym$, i.e. if $(M, \groupaddsym, \neutraladd)$ is a group.
+Analogously $\lift{\f}{\mathcal{M}}(\interval{\min(\V(T_{c_{>}}))}{y}{\V(T_{c_{>}})})$ can be computed by traversing from $c_{>}$ to $y$, summing over those vertices along the path that are strictly less than $y$, as well as the left children of all vertices along the path.
+
+\begin{minted}[mathescape]{haskell}
+-- Sum up the fingerprints of all items in the given tree
+-- which are strictly less than $y$.
+accLt :: Node -> U -> Fingerprint
+accLt (Leaf v fp) y
+    | v >= y    = emptyFp
+    | otherwise = liftFp fp
+accLt (Inner l v r _) y
+    | v >= y    = accLt l y
+    | otherwise = combine (label l) + (liftFp (hash v)) + (accLt r y)
+\end{minted}
+
+A simplified approach to these computations can be taken if $M$ has efficiently computable inverses with respect to $\groupaddsym$, i.e. if $(M, \groupaddsym, \neutraladd)$ is a group.
 
 \begin{definition}
 Let $(M, \groupaddsym, \neutraladd)$ be a monoid.
@@ -306,22 +315,48 @@ This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
 For $x, y \in M$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
 \end{definition}
 
-Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \groupadd{\inverseadd{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{x}{S})}}{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{y}{S})}$. Reusing the definitions from \cref{listing:subset-fingerprint}, we get:
+Observe that $\interval{x}{y}{S} = \interval{\min(S)}{y}{S} \setminus \interval{\min(S)}{x}{S}$, and thus also $\lift{\f}{\mathcal{M}}(\interval{x}{y}{S}) = \groupadd{\inverseadd{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{x}{S})}}{\lift{\f}{\mathcal{M}}(\interval{\min(S)}{y}{S})}$. We can thus simplify \texttt{intervalFingerprint}, getting rid of both \texttt{findInitial} and \texttt{accGeq}:
 
 \begin{minted}{haskell}
-intervalFingerprintGroup :: Node -> U -> U -> D
-intervalFingerprintGroup v x y = -(sumLt v x) + (sumLt v y)
+intervalFingerprintGroup :: Node -> U -> U -> Fingerprint
+intervalFingerprintGroup v x y = -(accLt v x) + (accLt v y)
 \end{minted}
 
-Alternatively, a slightly more efficient version that still does not require \texttt{sumGeq}:
+\subsubsection{Complexity}
 
-\begin{minted}{haskell}
-intervalFingerprint :: Node -> U -> U -> D
-intervalFingerprint v x y = case findInitial v x y of
-    Nothing               -> 0
-    Just (Leaf _ fp)      -> fp
-    Just (Inner l v' r _) -> -(sumLt l x) + (f v') + (sumLt r y)
+The worst-case running time occurs when the vertex $v$ with the smallest distance to $r$ such that $x \preceq v \prec y$ is $r$ itself, since then both \texttt{sumGeq} and \texttt{sumLt} perform a traversal to a leaf of maximal length. Since $T$ is balanced, only a logarithmic number of recursive calls is executed. Assuming $\f$ can be computed in $\complexity{1}$, the resulting time complexity is in $\complexity{\log(\abs{S})}$.
+
+Neither \texttt{accLt} nor \texttt{accGeq} are tail-recursive, but they can be rewritten into a tail-recursive form via the standard technique of adding an accumulator argument:
+
+\begin{minted}[mathescape]{haskell}
+accGeq :: Node -> U -> Fingerprint
+accGeq v x = accGeq' emptyFp v x
+
+accGeq' :: Fingerprint -> Node -> U -> Fingerprint
+accGeq' acc (Leaf v fp) x
+    | v < x     = acc
+    | otherwise = combine emptyFp (liftFp fp) acc
+accGeq' acc (Inner l v r _) x
+    | v < x     = accGeq' acc r x
+    | otherwise = accGeq' (combine (liftFp (hash v)) (label r) acc) l x
+
+accLt :: Node -> U -> Fingerprint
+accLt v y = accLt' emptyFp v y
+
+accLt' :: Fingerprint -> Node -> U -> Fingerprint
+accLt' acc (Leaf v fp) y
+    | v >= y    = acc
+    | otherwise = combine acc (liftFp fp) emptyFp
+accLt' acc (Inner l v r _) y
+    | v >= y    = accLt' acc l y
+    | otherwise = accLt' (combine acc (label l) + (liftFp (hash v))) r y
 \end{minted}
+
+The space complexity of computing the fingerprint for an interval is thus $\complexity{1}$. Note however that the tail-recursive forms require associativity to compute the same fingerprints as the original versions.
+
+As a closing remark on these computations, we want to point out that associativity not only allows us to abstract over differently shaped binary search trees, but also results in trees of higher degree leading to the same fingerprints. While binary trees simplify the presentation and are theoretically optimal, on actual hardware traversing pointers is expensive and loading sequential memory is cheap, which becomes even more pronounced when the tree resides on secondary storage.
+
+Optimized tree implementations thus have higher branching and store multiple items per vertex, a typical example being B-trees~\cite{bayer2002organization}. Our fingerprinting scheme admits such optimized implementations, in particular different nodes that want to synchronize data can choose their implementation techniques fully independently and yet maintain compatibility.
 
 \subsection{Differences to Homomorphic Hashing}
 
@@ -348,9 +383,9 @@ We call $\f$ a \defined{multiset homomorphic hash function} if $\f$ is a hash fu
 
 A multiset homomorphic hash function allows incrementally maintaining the hash of a multiset under insertions using only $\complexity{1}$ storage space, by storing the hash of the multiset and combining it with the hash of any inserted item. This can be generalized to support deletions as well: by allowing negative multiplicities for multiset items, multisets form a group under union. If the hash function is a group homomorphism, the hash of the multiset can be updated on deletion by subtracting the hash of the deleted item.
 
-This is more efficient than our approach, which requires $\complexity{n}$ space for the tree structure. This efficiency comes however at the cost of loss of flexibility. As multiset union is commutative, so must be the homomorphic monoid/group of fingerprints. Since our protocols require the ability to compute fingerprints over arbitrary intervals and we need $\complexity{n}$ to do so anyways, homomorphic hashing would not yield any space usage benefits, and we thus choose the approach that does not require commutativity.
+This is more efficient than our approach, which requires $\complexity{n}$ space for the tree structure. This efficiency comes however at the cost of loss of flexibility. As multiset union is commutative, so must be the homomorphic monoid/group of fingerprints. Since our protocols require the ability to compute fingerprints over arbitrary intervals and we need the tree of size $\complexity{n}$ to do so anyways, homomorphic hashing would not yield any space usage benefits, and we thus choose the approach that does not require commutativity.
 
-We additionally want to explicitly work with regular sets, not multisets. The reason why homomorphic hashes operate on multisets is that they admit more natural homomorphisms under union. For example, taking the size of a multiset is a homomorphism into the additive monoid on the natural numbers, whereas this is not true for regular sets, as e.g. $\abs{\set{x, y} \cup \set{y, z}} \neq \abs{\set{x, y}} + \abs{\set{y, z}}$. Set union is however a well behaved with respect to taking the size of the sets as it is a disjoint union, i.e. no item occurs in both sets.
+We additionally want to explicitly work with regular sets, not multisets. The reason why homomorphic hashes operate on multisets is that they admit more natural homomorphisms under union. For example, taking the size of a multiset is a homomorphism into the additive monoid on the natural numbers, whereas this is not true for regular sets, as e.g. $\abs{\set{x, y} \cup \set{y, z}} \neq \abs{\set{x, y}} + \abs{\set{y, z}}$. Set union is however well behaved with respect to taking the size of the sets if it is a disjoint union, i.e. no item occurs in both sets.
 
 For an algebraic-flavored characterization of our fingerprint functions, we thus need to account for items occurring on both sides of the union. This alone still would not change that the resulting concept would necessarily require a commutative monoid, so we must also restrict possible inputs to be sorted. This leads to the following definition:
 
@@ -536,3 +571,181 @@ Whereas the schemes based on commutative groups operate on two bitstrings at a t
 Alternatively, one can forgo the additional hash function and apply the Caley hash function directly to the encodings of items. This simplifies the overall scheme and removes reliance on a second hash function. On the other hand, if one expects the additional hash function to be harder to attack than the Caley hash, then making the attacks against the Caley hash function less flexible might overall make attacks more difficult. Furthermore, Caley hash functions are usually slower than typical choices for the hash function from items to bitstrings, so using both can produce significant speedups if items have long encodings.
 
 Aside from Caley hashes, we are not aware of any non-commutative monoids used for hashing. We would further like to note that any hashes based on groups still have more structure than required for our designs, as we don't need existence of inverse elements. Strictly speaking our designs do not even require a neutral element: the fingerprint of the empty set never needs to be exchanged in a protocol run, so we could have just as well defined fingerprints for all nonempty sets without relying on the neutral element to do so. The presentation we chose is merely more elegant. And finally, we do not require pre-image resistance for our fingerprints. Suitable hash functions could thus be located in a more general design space than studied in any literature we know of.
+
+\section{Pseudorandom Data Structures}
+\label{randomization}
+
+Monoidal fingerprints allow efficient deterministic computation of fingerprints, but at the price of having to rely on some non-standard cryptographic primitives. A more established cryptographic construction is that of Merkle trees~\cite{merkle1989certified} and related data structures, all based on hashing the concatenation of child hashes. There is a significant body of work in the context of authenticated data structures based on these constructions, from rather simple balanced binary trees~\cite{naor2000certificate} to arbitrary acyclic directed graphs~\cite{martel2004general}, and we will be able to refer to such work for proofs of collision resistance.
+
+The Merkle construction is however not associative when using a cryptographically secure hash function $\h$, as $\h(\h(\h(a) \concatenate \h(b)) \concatenate \h(c)) = \h(\h(a) \concatenate \h(\h(b) \concatenate \h(c)))$ would constitute a violation of collision resistance. Different such tree representations of the same set thus lead to completely different fingerprints. So in order to use this construction, there must be a unique search tree representation defined for every set.
+
+\cite{uniquerepresentation} shows that deterministic search trees with unique shapes require $\complexity{\sqrt{n}}$ time for insertions and deletions in the worst case, making them unsuitable for our use case. A natural extension is to look at randomized data structures that define a unique presentation which allows modification and search in $\complexity{\log(n)}$ with high probability.
+
+This has been thoroughly researched in the field of \defined{history-independent data structures}, intuitively speaking data structures whose bitlevel representations do not leak information about their construction sequence. This requirement has been shown in~\cite{hartline2005characterizing} to be equivalent to having a unique representation. For more background, we refer to the excellent introduction of~\cite{bender2016anti}.
+
+In the following, we present two such data structures for representing sets - a randomized binary tree, and the skip list - and define Merkle-like fingerprinting schemes for them such that the fingerprints of arbitrary intervals can be computed in logarithmic time with high probability. As all nodes need to arrive at the same representation, no true randomness can be involved. Instead, all random decisions are based on pseudorandom bits derived from the data itself.
+
+These schemes allow cryptographically secure fingerprints whose collision resistance does not depend on uncommon cryptographic building blocks. The price to pay is that computing fingerprints can take linear time in the worst case. Note however that the communication complexity of any synchronization protocol using these fingerprints is completely unaffected by the randomized computation time.
+
+\subsection{Pseudorandom Treaps}
+
+A \defined{treap}~\cite{seidel1996randomized} is a search tree in which every vertex has an associated \defined{priority} from a totally ordered set, and in which the priorities of the vertices form a heap:
+
+\begin{definition}
+Let $U$ be a set, $\prec$ a linear order on $U$, $P$ a set, $\leq$ a linear order on $P$, $\fun{\priority}{U}{P}$, $V \subseteq U$, and $T$ a binary search tree on $V$.
+
+Then we call $T$ a treap if for all $v \in V$ with parent $p$ it holds that $\priority(v) \leq \priority(p)$.
+\end{definition}
+
+From the properties of treaps shown in~\cite{seidel1996randomized} we will rely on the following:
+
+\begin{itemize}
+  \item If the priorities of all vertices are pairwise unequal, then there is exactly one treap on the vertex set, which is equal to of the search tree obtained by successively inserting items in decreasing priority without any balancing.
+  \item If the priorities are distributed uniformly at random, the height of the treap is expected to be logarithmic in the number of vertices.
+  \item Inserting or deleting an item while maintaining the treap properties can be done in time proportional to the height of the treap.
+\end{itemize}
+
+In the following, we will fix some cryptographically secure hash function $\fun{\p}{U}{\set{0, 1}^k}$, and define $\priority(u) \defeq \p(u)$, using the numeric order on $\set{0, 1}^k$ for comparing priorities. Since $\p$ is collision resistant, we can assume the resulting treaps to be unique, and since the output of a secure hash function is indistinguishable from a random mapping, we can assume the resulting treaps to have expected logarithmic height.
+
+Treaps store items in every vertex, whereas Merkle trees only store items in their leaves. \cite{buldas2002eliminating} proposes the following natural generalization and proves that the labels are collision free if the underlying hash function $\h$ is collision free:
+
+  \[
+   \tlabel{\h}(v) \defeq \begin{cases}
+\h(v), &  \text{for leaf $v$} \\
+\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \tlabel{\h}(v)) & \, \text{v internal vertex with left child $c_{<}$ and no right child}\\
+\tlabel{\h}(\tlabel{\h}(v) \concatenate \tlabel{\h}(c_{>})) & \, \text{v internal vertex with right child $c_{>}$ and no left child}\\
+\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \h(v) \concatenate \tlabel{\h}(c_{>})) & \, \text{v internal vertex with left child $c_{<}$ and right child $c_{>}$}
+\end{cases}
+  \]
+
+TODO fix overflow
+
+We will call a treap labeled according to this scheme a \defined{Merkle treap}. Since Merkle treaps are unique, we can define the fingerprint of some set as the root label of the Merkle treap on that set if it is nonempty, or $\nil$ otherwise.
+
+\subsubsection{Subsets}
+
+Now that we have defined the fingerprint of a set, we need a way of efficiently computing the fingerprint of any interval $\interval{x}{y}{S}$ given the Merkle treap of the set $S$. The algorithm can be expressed in exactly the same framework as that of \cref{subsets-associative}, changing merely some type definitions and the \texttt{combine} function:
+
+\begin{minted}[mathescape]{haskell}
+-- A fingerprint is now either a hash or $\mathtt{Nothing}$.
+type Fingerprint = Maybe D
+
+emptyFp :: Fingerprint
+emptyFp = Nothing
+
+liftFp :: D -> Fingerprint
+liftFp d = Just d
+
+-- Combine three fingerprints into a new fingerprint.
+combine :: Fingerprint -> Fingerprint -> Fingerprint -> Fingerprint
+combine Nothing Nothing Nothing = Nothing
+combine (Just a) Nothing Nothing = Just a
+combine Nothing (Just b) Nothing = Just b
+combine Nothing Nothing (Just c) = Just c
+combine (Just a) (Just b) Nothing = Just (hash (concat a b))
+combine (Just a) Nothing (Just c) = Just (hash (concat a c))
+combine Nothing (Just b) (Just c) = Just (hash (concat b c))
+combine (Just a) (Just b) (Just c) = Just (hash (concat (concat a b) c))
+\end{minted}
+
+While the tree traversal and accumulation of data otherwise stays the same, the nature of the correctness argument changes quite a bit, since we cannot rely on associativity of \texttt{combine} anymore. Instead, the core idea of the argument is that the computed fingerprint depends only on the relative positioning between the tree vertices within the interval, which stays identical no matter how many vertices outside the interval are added.
+
+Recall that the shape of a treap is always that of the tree obtained by inserting items sorted by decreasing priority without rebalancing. Now consider the vertex $v$ with the smallest distance to the root $r$ such that $x \preceq v \prec y$, i.e. the vertex computed by \texttt{findInitial}. All items within $\interval{x}{y}{S}$ are contained in $\V(T_v)$. The fingerprint computation for the interval is clearly local to $T_v$, and while insertion of items outside that tree might change the path from $r$ to $v$, they do not change the shape of $T_v$.
+
+It thus remains to show that \texttt{accGeq} and \texttt{accLt} compute the same result no matter how many items outside the interval are contained in the tree they process. We give the full argument for \texttt{accGeq}, the case for \texttt{accLt} follows analogously.
+
+\begin{proof}
+Let $v$ be the root of a tree $T_v$ and $x \in U$. We show by induction on $\abs{\V(T_v)}$ that \texttt{accGeq} computes a value equal to the root label of the Merkle treap on $S_{\succeq} \defeq \set{u \in \V(T_v) \mid x \preceq u}$ (or $\nil$ if the set is empty).
+
+\textbf{IB:} If $v$ is a leaf with $v \prec x$, then $\mathtt{(accGeq\ v\ x)} = \nil$ and indeed $S_{t} = \emptyset$. If $v$ is a leaf with $x \preceq v$, then $\mathtt{(accGeq\ v\ x)} =  \mathtt{Just \h(v)} = \mathtt{Just \tlabel{\h}(v)}$.
+
+\textbf{IH:} Let  $n \in \N$ and $T_r$ be a tree rooted at $r$ with $\abs{\V(T_r)} = n$. Then $\mathtt{(accGeq\ v\ x)} = \tlabel{\h}(v)$.
+
+\textbf{IS:} Let $T_v$ be a tree rooted at $v$ with $\abs{\V(T_v)} = n + 1$, let $c_{<}$ be the right child of $v$  and let $c_
+{>}$ be the left child of $v$.
+
+\begin{caselist}
+\case If $v \prec x$, then:
+
+\begin{align*}
+\mathtt{(accGeq\ v\ x)} &\overset{def}= \mathtt{(accGeq\ c_{>}\ x)}\\
+&\overset{IH}= \tlabel{\h}(c_{>})\\
+&\overset{v \prec x}= tlabel{\h}(v)\\
+\end{align*}
+
+\case Otherwise, $x \preceq v$. Neither $v$ nor any vertex in $T_{c_{<}}$ has any influence on the shape of $T_{c_{>}}$. We thus have:
+
+\begin{align*}
+\mathtt{(accGeq\ v\ x)} &\overset{def}= \mathtt{(combine\ (accGeq\ c_{<}\ x)\ \h(v) \tlabel{\h}(c_{>}))}\\
+&\overset{IH}= \mathtt{(combine\ \tlabel{\h}(c_{<})\ \h(v) \tlabel{\h}(c_{>}))}\\
+&\overset{def}= \tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \h(v) \concatenate \tlabel{\h}(c_{>}))\\
+&\overset{def}= \tlabel{\h}(v)\\
+\end{align*}
+\end{caselist}
+\end{proof}
+
+The computation time is proportional to the height of the treap, so expected $\complexity{\log(n)}$. But as the hash function is not associative, the tail-recursive versions of \texttt{accGeq} and \texttt{accLt} do not compute the correct result. Intuitively, the problem is that the computation traverses the tree from top to bottom, but the fingerprints are defined through a computation from the bottom to the top. Accordingly, tail-recursive formulations can be achieved by adding parent-pointers to all vertices and performing the computation by first traversing to the interval boundary and then accumulating fingerprints while moving back up through the tree. The space complexity thus remains in $\complexity{1}$.
+
+Just as with balanced search trees, a binary treap might be the most natural formulation, but not the most efficient one on real hardware. \cite{golovin2009b} describes B-treaps, which are treaps of higher degree. If such an optimized realization is chosen, the need to map between the actual data layout and the shape of the treap which defines the fingerprints complicates the implementation, in particular compared to monoidal fingerprints which naturally abstract over tree implementation details.
+
+Beyond treaps there are other randomized search trees. \cite{pugh1989incremental} suggests hash tries for fingerprinting sets, and our mechanism for computing fingerprints of intervals is compatible with their approach. The reason we opted for treaps is that the pseudorandom selection of the tree shape is completely decoupled from the ordering over the items, whereas in a hash trie the ordering follows from the tree shape (or vice versa, depending on the viewpoint). As our protocols can benefit from a non-arbitrary ordering (compare \cref{observations}), treaps are the more flexible solution.
+
+\subsection{Pseudorandom Skip Lists}
+
+% tarjan set equality testing https://apps.dtic.mil/sti/pdfs/ADA223643.pdf
+% pugh function caching data structures http://matthewhammer.org/courses/csci7000-s17/readings/Pugh89.pdf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

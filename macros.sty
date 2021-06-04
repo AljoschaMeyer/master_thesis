@@ -24,6 +24,7 @@
 \newcommand{\groupsubtract}[2]{{#1} \ominus {#2}}
 \newcommand{\inverseadd}[1]{-{#1}}
 
+\newcommand{\concatenate}[0]{\cdot}
 \newcommand{\abs}[1]{|{#1}|}
 
 \newcommand{\fun}[3]{{#1}: {#2} \rightarrow {#3}}
@@ -36,6 +37,8 @@
 
 \newcommand{\N}[0]{\mathds{N}}
 \newcommand{\Z}[0]{\mathds{Z}}
+
+\newcommand{\nil}[0]{\mathtt{Nothing}}
 
 
 
@@ -119,12 +122,16 @@
 \DeclareMathOperator{\h}{h}
 \DeclareMathOperator{\f}{f}
 \DeclareMathOperator{\g}{g}
+\DeclareMathOperator{\p}{p}
 \DeclareMathOperator{\V}{V}
 \DeclareMathOperator{\xor}{xor}
+\DeclareMathOperator{\priority}{priority}
 
 \newcommand{\lift}[2]{\operatorname{lift_{#1}^{#2}}}
 \newcommand{\liftlabel}[2]{\operatorname{label_{#1}^{#2}}}
 \newcommand{\somewhatmorphism}[0]{set union somewhatmorphism}
+
+\newcommand{\tlabel}[1]{\operatorname{treaplabel_{#1}}}
 
 \newcommand{\interval}[3]{[{#1},{#2})_{#3}}
 \newcommand{\intervalx}[3]{({#1},{#2})_{#3}}
