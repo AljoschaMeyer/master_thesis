@@ -562,7 +562,7 @@ For our context in which fingerprints are frequently sent over the network, long
 
 \cite{bellare1997new} also proposes a fourth monoid based on lattices. \cite{lewi2019securing} give a specific instantiation providing 200 bits of security with fingerprints of size $16 \cdot 1024 = 16384$ bit.
 
-All of the preceeding monoid operations are commutative, which our approach to fingerprint computation does not require. A typical associative but not commutative operation is matrix multiplication. Study of a family of hash functions based on multiplication of invertible matrices was initiated in \cite{zemor1991hash}, whose security is related to solving hard graph problems on the Caley graph of the group. \cite{petit2011rubik} gives a good overview about the general principle and the security aspects of Caley hash functions.
+All of the preceeding monoid operations are commutative, which our approach to fingerprint computation does not require. A typical associative but not commutative operation is matrix multiplication. Study of a family of hash functions based on multiplication of invertible matrices was initiated in \cite{zemor1991hash}, whose security is related to solving hard graph problems on the Caley graph of the matrix multiplication group. \cite{petit2011rubik} gives a good overview about the general principle and the security aspects of Caley hash functions.
 
 While \cite{tillich1994hashing}, an improvement over the originally proposed scheme, has been successfully attacked in \cite{grassl2011cryptanalysis}\cite{petit2010preimages}, there are several modifications~\cite{petit2009graph}\cite{bromberg2017navigating}\cite{sosnovski2016cayley} for which no attacks are currently known, and \cite{mullan2016text} showed random self-reducibility for Caley hash functions.
 
@@ -586,6 +586,10 @@ This has been thoroughly researched in the field of \defined{history-independent
 In the following, we present two such data structures for representing sets - a randomized binary tree, and the skip list - and define Merkle-like fingerprinting schemes for them such that the fingerprints of arbitrary intervals can be computed in logarithmic time with high probability. As all nodes need to arrive at the same representation, no true randomness can be involved. Instead, all random decisions are based on pseudorandom bits derived from the data itself.
 
 These schemes allow cryptographically secure fingerprints whose collision resistance does not depend on uncommon cryptographic building blocks. The price to pay is that computing fingerprints can take linear time in the worst case. Note however that the communication complexity of any synchronization protocol using these fingerprints is completely unaffected by the randomized computation time.
+
+Unfortunately, adversaries can efficiently create data sets for which the randomized solutions degraded to linear performance, thus enabling denial-of-service attacks as the cost of computing the fingerprints during a protocol run can be made to dominate the communication cost. Passive adversaries however cannot effectively attack these fingerprints: even though they can technically only forward those parts of the data structure that have degraded performance relative to the number of items in those parts, they would still increase the absolute resource usage of their victims if they simply forwarded all data.
+
+Proponents of randomized data structures also claim that they are significantly easier to implement than balanced search trees (see e.g.~\cite{seidel1996randomized} or~\cite{pugh1990skip}), making it worthwhile to consider them even in trusted environments, in which their expected logarithmic update complexities suffice.
 
 \subsection{Pseudorandom Treaps}
 
@@ -690,14 +694,301 @@ Just as with balanced search trees, a binary treap might be the most natural for
 
 Beyond treaps there are other randomized search trees. \cite{pugh1989incremental} suggests hash tries for fingerprinting sets, and our mechanism for computing fingerprints of intervals is compatible with their approach. The reason we opted for treaps is that the pseudorandom selection of the tree shape is completely decoupled from the ordering over the items, whereas in a hash trie the ordering follows from the tree shape (or vice versa, depending on the viewpoint). As our protocols can benefit from a non-arbitrary ordering (compare \cref{observations}), treaps are the more flexible solution.
 
+There exists also some work on deterministic unique tree representations that stay efficient if the number of items is either a particularly small or a particularly large fraction of the size of the universe, see~\cite{sundar1994unique} for both a specific approach and more related work. These approaches could also be adapted for our purposes, but since they pose restrictions on the number of items that can be stored, they are less flexible than our other approaches.
+
+\subsubsection{Adversarial Treap Construction}
+
+The main motivation for looking at pseudorandom schemes was to be able to rely on well-known, conventional, non-associative hash functions, implying that resilience against malicious peers is desired. While Merkle-treaps are collision-resistant, they open up another angle of attack: a malicious party can try to construct unbalanced treaps to make the cost of computing fingerprints super-logarithmic in the number of items, leading to a denial-of-service attack as the cost of computing the fingerprints during a protocol around dominates the communication cost.
+
+There is a fairly straightforward way of creating treaps on $n$ vertices of height $n$ in expected $\complexity{n^2}$ time and $\complexity{1}$ space, making treaps unsuitable for an adversarial environment. A sequence $(u_0, u_1, \ldots, u_{n - 1})$ of items such that the treap on these items has height $n$ can be computed by successively choosing arbitrary but always increasing with respect to $\preceq$ items $p_j$ and letting $u_i \defeq p_j$ if $\floor{i \cdot \frac{2^k}{n}} \leq \priority(p_j) < \floor{(i + 1) \cdot \frac{2^k}{n}}$ (recall that $k$ is the number of bits of a hash digest). The probability for the priority of an arbitrary item to fall within the desired interval is $\frac{1}{n}$, so finding one takes expected $\complexity{n}$ time, finding a sequence of $n$ of these accordingly takes expected $\complexity{n^2}$ time.
+
 \subsection{Pseudorandom Skip Lists}
 
-% tarjan set equality testing https://apps.dtic.mil/sti/pdfs/ADA223643.pdf
-% pugh function caching data structures http://matthewhammer.org/courses/csci7000-s17/readings/Pugh89.pdf
+The skip list~\cite{pugh1990skip}\cite{pugh1998skip} is a probabilistic data structure for storing sets that does not use a tree representation, but rather a hierarchy of progressively sparser linked lists containing set items in sorted order. The list at layer $0$ contains every item, the list at layer $i + 1$ contains every item from layer $i$ with a probability of $\frac{1}{2}$. Intuitively, when inserting an item into the skip list, one performs coin flips until one loses, the item is then added at the correct position into as many layers as one performed coin flips. \Cref{fig:skip-list-example} gives an example.
+
+\newcommand{\skiplistnode}[3]{
+\node (n#1#2) at (#1, #2) [skiplistnode] {#3};
+}
+
+\newcommand{\skiplisttower}[3]{
+\foreach \y in {0,...,#2}
+{
+    \skiplistnode{#1}{\y}{#3}
+}
+}
+
+\newcommand{\toweredges}[2]{
+\foreach \y in {1,...,#2}
+{
+    \pgfmathtruncatemacro{\myPrev}{\y-1}
+    \draw (n#1\y) edge[edge] (n#1\myPrev);
+}
+}
+
+\newcommand{\listedges}[2]{
+\foreach \y in {0,...,#2}
+{
+    \pgfmathtruncatemacro{\myPrev}{#1-1}
+    \draw (n#1\y) edge[edge] (n\myPrev\y);
+}
+}
+
+\begin{figure*}
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale,font=\footnotesize]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+\skiplisttower{0}{2}{$\bot$}
+\skiplisttower{1}{2}{$\examplea$}
+\skiplisttower{2}{0}{$\exampleb$}
+\skiplisttower{3}{1}{$\examplec$}
+\skiplisttower{4}{0}{$\exampled$}
+\skiplisttower{5}{1}{$\examplee$}
+\skiplisttower{6}{0}{$\examplef$}
+\skiplisttower{7}{0}{$\exampleg$}
+\skiplisttower{8}{1}{$\exampleh$}
+\skiplisttower{9}{2}{$\top$}
+
+\toweredges{0}{2}
+\toweredges{1}{2}
+\toweredges{3}{1}
+\toweredges{5}{1}
+\toweredges{8}{1}
+\toweredges{9}{2}
+
+\listedges{1}{2}
+\listedges{2}{0}
+\listedges{3}{0}
+\listedges{4}{0}
+\listedges{5}{0}
+\listedges{6}{0}
+\listedges{7}{0}
+\listedges{8}{0}
+\listedges{9}{1}
+
+\draw (n31) edge[edge] (n11);
+\draw (n51) edge[edge] (n31);
+\draw (n81) edge[edge] (n51);
+\draw (n92) edge[edge] (n12);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\caption{
+An example skip list, demonstrating the layers of sorted linked lists. The $\bot$ and $\top$ vertices are the start and end points for all lists.
+}
+
+\label{fig:skip-list-example}
+\end{figure*}
+
+To define a pseudorandom skip list, we again fix some cryptographically secure hash function $\fun{\p}{U}{\set{0, 1}^k}$, and determine the layers of an item $u$ by counting the number of leading zero bits of $\p(u)$ and adding one.
+
+Toward a fingerprinting scheme, we define a labeling over all items in all layers. Let $u_{l, i}$ denote the $i$-th item in layer $l$, recall that $\h$ is some cryptographically secure Hash function.
+Then $\sllabel{\h}(u_{0, i}) \defeq \h(u_{0, i})$ and $\sllabel{\h}(u_{l + 1, i}) \defeq \h(\sllabel{\h}(u_{l, j}) \cdot \h( \sllabel{\h}(u_{l, j + 1}) \cdot \h(\ldots \cdot \sllabel{\h}(u_{l, j + m}))))$ where $(u_{l, j} \ldots u_{l, j + m})$ is the longest subsequence of layer $l$ such that $u_{l, j} = u_{l + 1, i}$ and $u_{l, j + m} \prec u_{l + 1, i + 1}$. \Cref{fig:skip-list-flow} visualizes an example.
+
+\begin{figure*}
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale,font=\footnotesize]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+\skiplisttower{0}{2}{$\bot$}
+\skiplisttower{1}{2}{$\examplea$}
+\skiplisttower{2}{0}{$\exampleb$}
+\skiplisttower{3}{1}{$\examplec$}
+\skiplisttower{4}{0}{$\exampled$}
+\skiplisttower{5}{1}{$\examplee$}
+\skiplisttower{6}{0}{$\examplef$}
+\skiplisttower{7}{0}{$\exampleg$}
+\skiplisttower{8}{1}{$\exampleh$}
+\skiplisttower{9}{2}{$\top$}
+
+\toweredges{0}{2}
+\toweredges{1}{2}
+\toweredges{3}{1}
+\toweredges{5}{1}
+\toweredges{8}{1}
+\toweredges{9}{2}
+
+\listedges{1}{2}
+\listedges{2}{0}
+\listedges{3}{0}
+\listedges{4}{0}
+\listedges{5}{0}
+\listedges{6}{0}
+\listedges{7}{0}
+\listedges{8}{0}
+\listedges{9}{1}
+
+\draw (n31) edge[edge] (n11);
+\draw (n51) edge[edge] (n31);
+\draw (n81) edge[edge] (n51);
+\draw (n92) edge[edge] (n12);
+
+\draw[->] (n10) edge[dep] (n11);
+\draw[->] (n20) edge[dep] (n11);
+
+\draw[->] (n30) edge[dep] (n31);
+\draw[->] (n40) edge[dep] (n31);
+
+\draw[->] (n50) edge[dep] (n51);
+\draw[->] (n60) edge[dep] (n51);
+\draw[->] (n70) edge[dep] (n51);
+
+\draw[->] (n80) edge[dep] (n81);
+
+\draw[->] (n11) edge[dep] (n12);
+\draw[->] (n31) edge[dep] (n12);
+\draw[->] (n51) edge[dep] (n12);
+\draw[->] (n81) edge[dep] (n12);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\caption{
+A visualization of which labels influence which other labels. One can see that these dependencies form a tree.
+}
+
+\label{fig:skip-list-flow}
+\end{figure*}
+
+Every label contributes to the computation of at most one other label, which is located on the next layer. Maintaining labels when inserting or deleting an item thus takes a number of hash computations bounded by the height of the skip list, which is expected $\complexity{\log(n)}$. The number of labor concatenations that need to be performed at each layer is also randomized, but on average there are two, as the probability for an item to also occur at the next layer is $\frac{1}{2}$. The expected time thus stays in $\complexity{\log(n)}$.
+
+Denote by $\skipdomain(u_{l, i})$ the set of items $u$ such that $u_{l, i} \preceq u \prec u_{l, i + 1}$, i.e. the set of all items whose hash contributes to the label of $u_{l, i}$. Now let $S \subseteq U$ be a finite set. The fingerprint of $S$ is defined as $\nil$ if $S = \emptyset$, and otherwise as $\h(u_{l_0, i_0} \cdot \h(u_{l_1, i_1} \cdot \h(\ldots \cdot u_{l_m, i_m})))$ where $(u_{l_0, i_0}, u_{l_1, i_1}, \ldots, u_{l_m, i_m})$ is the unique shortest sequence of vertices in the pseudorandom skip list on $S$ such that its items are strictly increasing and their $\skipdomain$s partition $S$, choosing the vertex of the highest possible layer if multiple vertices have equal domains. See \cref{fig:skip-list-fingerprint} for an example.
+
+\begin{figure*}
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale,font=\footnotesize]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+\skiplisttower{0}{2}{$\bot$}
+\skiplisttower{1}{2}{$\examplea$}
+\node (n20) at (2, 0) [fingerprintnode] {$\exampleb$};
+\skiplisttower{3}{0}{$\examplec$}
+\node (n31) at (3, 1) [fingerprintnode] {$\examplec$};
+\skiplisttower{4}{0}{$\exampled$}
+\skiplisttower{5}{0}{$\examplee$}
+\node (n51) at (5, 1) [fingerprintnode] {$\examplee$};
+\node (n60) at (6, 0) [fingerprintnode] {$\examplef$};
+\skiplisttower{7}{0}{$\exampleg$}
+\skiplisttower{8}{1}{$\exampleh$}
+\skiplisttower{9}{2}{$\top$}
+
+\toweredges{0}{2}
+\toweredges{1}{2}
+\toweredges{3}{1}
+\toweredges{5}{1}
+\toweredges{8}{1}
+\toweredges{9}{2}
+
+\listedges{1}{2}
+\listedges{2}{0}
+\listedges{3}{0}
+\listedges{4}{0}
+\listedges{5}{0}
+\listedges{6}{0}
+\listedges{7}{0}
+\listedges{8}{0}
+\listedges{9}{1}
+
+\draw (n31) edge[edge] (n11);
+\draw (n51) edge[edge] (n31);
+\draw (n81) edge[edge] (n51);
+\draw (n92) edge[edge] (n12);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\caption{
+The skip list nodes contributing to the fingerprint of the interval $\interval{\exampleb}{\exampleg}{S}$. If the interval had been $\interval{\exampleb}{\examplef}{S}$, it would have again been the topmost $\examplee$ vertex whose label would have been hashed.
+}
+
+\label{fig:skip-list-fingerprint}
+\end{figure*}
+
+We next sketch an algorithmic way of determining this sequence for any interval $\interval{x}{y}{S}$ given the deterministic skip list for $S$, but refrain from giving correctness proofs as they are rather verbose and convey no particular insight that is not better conveyed in the accompanying figures.
+
+Let $\bar{u} = (u_0, u_1, \ldots, u_m)$ be the shortest path in the skip list from its beginning to the vertex $y$ excluding $y$ itself, i.e. the sequence of vertices traversed when looking up $y$ in the skip list. This sequence has expected logarithmic length and can be computed in expected logarithmic time. Obtain a shorter sequence $\bar{u'} = (u'_0, u'_1, \ldots, u'_{m'})$ by keeping from all vertices in $\bar{u}$ that correspond to the same item the one in the greatest layer such that its $\skipdomain$ does not contain any item greater than or equal to $y$. \Cref{fig:skip-list-fingerprint-traversal} provides an example.
+
+\begin{figure*}
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale,font=\footnotesize]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+\skiplisttower{0}{2}{$\bot$}
+\skiplisttower{1}{2}{$\examplea$}
+\node (n20) at (2, 0) [fingerprintnode] {$\exampleb$};
+\skiplisttower{3}{0}{$\examplec$}
+\node (n31) at (3, 1) [fingerprintnode] {$\examplec$};
+\skiplisttower{4}{0}{$\exampled$}
+\skiplisttower{5}{0}{$\examplee$}
+\node (n51) at (5, 1) [fingerprintnode] {$\examplee$};
+\node (n60) at (6, 0) [fingerprintnode] {$\examplef$};
+\skiplisttower{7}{0}{$\exampleg$}
+\skiplisttower{8}{1}{$\exampleh$}
+\skiplisttower{9}{2}{$\top$}
+
+\toweredges{0}{2}
+\toweredges{1}{2}
+\toweredges{3}{1}
+\toweredges{5}{1}
+\toweredges{8}{1}
+\toweredges{9}{2}
+
+\listedges{1}{2}
+\listedges{2}{0}
+\listedges{3}{0}
+\listedges{4}{0}
+\listedges{5}{0}
+\listedges{6}{0}
+\listedges{7}{0}
+\listedges{8}{0}
+\listedges{9}{1}
+
+\draw (n31) edge[edge] (n11);
+\draw (n51) edge[edge] (n31);
+\draw (n81) edge[edge] (n51);
+\draw (n92) edge[edge] (n12);
 
 
+\begin{scope}[transparency group, opacity=0.3]
+			\draw[red,line width=14pt,rounded corners=0.1em,line cap=round] (n02.center) -- (n12.center) -- (n11.center) -- (n31.center) -- (n51.center) -- (n50.center) -- (n60.center) -- (n70.center);
+			\draw[red,line width=14pt,rounded corners=1em,line cap=round] (n02.center) -- (n12.center) -- (n11.center) -- (n31.center) -- (n51.center) -- (n50.center) -- (n60.center) -- (n70.center);
+		\end{scope}
 
+\begin{scope}[transparency group, opacity=0.3]
+			\draw[blue,line width=14pt,rounded corners=0.1em,line cap=round] (n92.center) -- (n91.center) -- (n81.center) -- (n51.center) -- (n31.center) -- (n30.center) -- (n20.center);
+			\draw[blue,line width=14pt,rounded corners=1em,line cap=round] (n92.center) -- (n91.center) -- (n81.center) -- (n51.center) -- (n31.center) -- (n30.center) -- (n20.center);
+		\end{scope}
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
 
+\caption{
+The forward search path to $\exampleg$ (red) and the backward search path to $\exampleb$ (blue) allow to read off which vertices contribute to the fingerprint of $\interval{\exampleb}{\exampleg}{S}$.
+}
+
+\label{fig:skip-list-fingerprint-traversal}
+\end{figure*}
+
+Now let $\bar{v} = (v_0, v_1, \ldots, v'_o)$ be the shortest path in the skip list obtained by inverting the order on items from its beginning to the vertex $x$. Intuitively, this corresponds to looking up $x$ ``from the back'' in a doubly-linked skip list. Obtain from $\bar{v}$ the corresponding shorter sequence $\bar{v'} = (v'_0, v'_1, \ldots, v'_{o'})$ by keeping from all vertices that correspond to the same item the one of the greatest layer such that its $\skipdomain$ does not contain any item strictly less than $x$.
+
+We claim that $\bar{v'}$ and $\bar{u'}$ always intersect (if $\interval{x}{y}{S} \neq \emptyset$) in at least one vertex, i.e. there are unique $v'_i \in \bar{v'}$ and $u'_j \in \bar{u'}$ with $v'_i = u'_j$. Then the sequence $(v'_0, v'_1, \ldots, v'_i = u'_j, u'_{j + 1}, \ldots, u'_{m})$ is the unique shortest sequence of vertices of strictly increasing items whose $\skipdomain$s partition $\interval{x}{y}{S}$. Since $\bar{v'}$ and $\bar{u'}$ can be computed in expected logarithmic time, so can this sequence, and thus fingerprints can be computed in expected logarithmic time.
+
+\subsubsection{Adversarial Skip List Construction}
+
+Pseudorandom skip lists are even less suited for adversarial environments then pseudorandom treaps. Performance degrades if most items have the same maximum layer. A randomly chosen item has a hash beginning with a $1$ bit with probability $\frac{1}{2}$, these items only reside in layer $0$. An adversary can thus create a linear list of exclusively layer $0$ items of length $n$ in expected $2n \in \complexity{n}$ time.
 
 
 

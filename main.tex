@@ -24,6 +24,8 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta}
 \usetikzlibrary{shapes}
+\usetikzlibrary{calc}
+\usepackage{pgffor}
 
 \usepackage{listings}
 \usepackage{minted}
@@ -126,8 +128,28 @@ local/.style={
 }
 
 \tikzstyle{edge} = [draw,thick,opacity=0.25]
+\tikzstyle{dep} = [draw,thick]
 
+\tikzset{
+skiplistnode/.style={
+  align=center,
+  draw=black,
+  fill=white,
+minimum width={width("\exampleg") + width("x")},
+minimum height={height("\exampleh") + height("h"}
+  }
+}
 
+\tikzset{
+fingerprintnode/.style={
+  align=center,
+  draw=black,
+  thick,
+  fill=lightgray,
+minimum width={width("\exampleg") + width("x")},
+minimum height={height("\exampleh") + height("h"}
+  }
+}
 
 
 
