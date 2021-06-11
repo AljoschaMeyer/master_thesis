@@ -128,19 +128,19 @@ The protocol gives nodes the freedom to respond to an interval fingerprint with 
 
 A node is similarly given freedom over the number of subintervals into which to split an interval when recursing. We will assume a node always splits into at most $b \in \mathbb{N}, b \geq 2$ subintervals. As with $t$, higher numbers reduce the number of roundtrips at the cost of potentially sending items or fingerprints that did not need sending.
 
-Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{min} \defeq \mathit{min}(n_0, n_1)$, $n_{max} \defeq \mathit{max}(n_0, n_1)$, $n_{\cap} \def \abs{\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1}}$, $n_{\cup} \def \abs{\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}) \setminus (\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1})}$. TODO remove those that are not needed
+Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{\min} \defeq \min(n_0, n_1)$, $n_{\max} \defeq \max(n_0, n_1)$, $n_{\cap} \def \abs{\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1}}$, $n_{\cup} \def \abs{\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\interval{x}{y}{X_0} \cup \interval{x}{y}{X_1}) \setminus (\interval{x}{y}{X_0} \cap \interval{x}{y}{X_1})}$. TODO remove those that are not needed
 
 \subsection{Preliminary Observations}
 
 A helpful observation for the following analysis is that the interval fingerprints that are being exchanged during a protocol run form a rooted tree where every vertex has at most $b$ children. When a leaf of the tree is reached, an exchange of interval item sets follows. Equal fingerprints can also cut the tree short, but for the following worst-case analyses we will assume this does not occur.
 
-Node $\mathcal{X}_i$ can branch at most $\ceil{\mathit{log}_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$. The number of vertices of such a complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\mathit{log}_{b}(n_{min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{min} \leq 2n \in \complexity{n}$.
+Node $\mathcal{X}_i$ can branch at most $\ceil{\log_{b}(n_i)}$ times, so the overall height of the tree is bounded by $2 \cdot\ceil{\log_{b}(n_{\min})}$. The number of vertices of such a complete tree of height $h$ is at most $\sum_{i=0}^{h} b^{i} = \frac{b^{h} - 1}{b - 1}$. For $h \leq 2 \cdot\ceil{\log_{b}(n_{\min})}$, $\frac{b^{h} - 1}{b - 1} \leq 2 \cdot 2 \cdot n_{\min} \leq 2n \in \complexity{n}$.
 
-The parameter $t$ determines when recursion is cut off, and thus influences the height of the tree. For $t = 1$, the protocol recurses as far as possible. For $t = b$, the last level of recursion is cut off, for $t = b^2$ the last two levels, and so on. Overall, the height of the tree is reduced by $\floor{\mathit{log}_{b}(t)}$.
+The parameter $t$ determines when recursion is cut off, and thus influences the height of the tree. For $t = 1$, the protocol recurses as far as possible. For $t = b$, the last level of recursion is cut off, for $t = b^2$ the last two levels, and so on. Overall, the height of the tree is reduced by $\floor{\log_{b}(t)}$.
 
 \subsection{Communication Rounds}
 
-The number of communication rounds clearly corresponds to the height of the tree, plus $2$ to account for the exchange of interval item sets, so the worst-case is $2 + 2 \cdot\ceil{\mathit{log}_{b}(n_{min})} - \floor{\mathit{log}_{b}(t)} \in \complexity{\mathit{log}_{b}(n)}$. This number cannot be bounded by $n_{\triangle}$, as witnessed by problem instances where one node is missing exactly one item compared to the other node. In such an instance, $b - 1$ branches in each recursion step result in equal fingerprints, but the one branch that does continue reaches the recursion anchor only after the full number of rounds. See \cref{fig:worst-rounds} for an example.
+The number of communication rounds clearly corresponds to the height of the tree, plus $2$ to account for the exchange of interval item sets, so the worst-case is $2 + 2 \cdot\ceil{\log_{b}(n_{\min})} - \floor{\log_{b}(t)} \in \complexity{\log_{b}(n)}$. This number cannot be bounded by $n_{\triangle}$, as witnessed by problem instances where one node is missing exactly one item compared to the other node. In such an instance, $b - 1$ branches in each recursion step result in equal fingerprints, but the one branch that does continue reaches the recursion anchor only after the full number of rounds. See \cref{fig:worst-rounds} for an example.
 
 \begin{figure*}
 $X_0 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \exampleg, \exampleh \}$
@@ -202,9 +202,7 @@ The total number of bits that needs to be transmitted during a protocol run is p
 
 The exchange of interval item sets consists in the worst case of exchanging every item using $\ceil{\frac{n}{t}}$ interval item sets. An interval item set needs to transmit two items to encode the boundaries, as well as the items themselves, which lies in $\complexity{1}$ per interval item set. All interval item sets together thus amount to another $\complexity{n}$, leading to a total of $\complexity{n}$ bits being transmitted in the worst case.
 
-\Cref{fig:worst-bytes} shows a worst-case example in which the tree of height $h \defeq \mathit{log}_{b}(2 \cdot n_{min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices. 
-
-TODO bound complexity by difference, also average case
+\Cref{fig:worst-bytes} shows a worst-case example in which the tree of height $h \defeq \log_{b}(2 \cdot n_{\min})$ has all $\frac{b^{h} - 1}{b - 1}$ vertices.
 
 \begin{figure*}
 $X_0 \defeq \{\examplea, \examplec, \examplee, \exampleg \}$
@@ -273,20 +271,191 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 \label{fig:worst-bytes}
 \end{figure*}
 
-\subsection{Impact of Randomized Intervals}
+This worst-case complexity is no better than the naïve protocol where the two nodes simply exchange their whole item sets. The motivation behind our protocol is to utilize similarities in the sets that are being reconciled, so it it makes sense to bound the communication complexity by $n_{\triangle}$.
+
+As discussed in the analysis of the number of communication rounds, if $n_{\triangle} = 1$ this results in the protocol tracing a path from the root to a leaf in the tree. If $n_{\triangle}$ takes on larger values, more paths from the root to leaves occur, each contributing up to $2 + 2 \cdot\ceil{\log_{b}(n_{\min})} - \floor{\log_{b}(t)} \in \complexity{\log_{b}(n)}$ vertices, but the number of vertices in the union of these paths is of course bounded by the total number of vertices in the tree. We thus obtain a communication complexity of $\complexity{\min(n_{\triangle} \cdot \log_b(n), n)}$ bits.
+
+\subsection{Impact of Randomized Interval Boundaries}
 \label{random-boundaries}
 
-TODO impact of boundary randomization
+\Cref{why-random-boundaries} argues in favor of randomizing interval boundaries to protect against the impact of maliciously crafted fingerprint collisions. We now consider three different randomization strategies and their impacts on the number of communication rounds and the number of bits that need to be transmitted. To describe the boundary selection strategies, first consider that splitting an ordered set $S = \set{s_0 \prec s_1 \prec \ldots \prec s_{n - 1}}$ items into $b$ intervals consists of choosing $b$ indices $i_0 < i_1 < \ldots < i_{b-1}$, thus defining the intervals $\interval{s_{i_0}}{s_{i_1}}{S}, \interval{s_{i_1}}{s_{i_2}}{S}, \ldots, \interval{s_{i_{b - 2}}}{s_{i_{b - 1}}}{S}, \interval{s_{i_{b - 1}}}{s_{i_0}}{S}$.
+
+The randomization strategy with the lowest impact creates intervals of identical sizes as the regular strategy (splitting into $b$ subintervals of evenly distributed size per communication around), but shifts where these boundaries lie. Precisely: first, interval boundaries $i_0, i_1, \ldots, i_{b - 1}$ are computed deterministically, all of which lie $\frac{n}{b}$ apart. Then some random integer $k \in \interval{0}{\frac{n}{b}}{\N}$ is chosen, and then the new boundaries are $s_{i_j + k \mod b}$ for all $0 \leq j < b$.
+
+ As the number and size of intervals is identical to that of the deterministic protocol version, communication complexity remains unchanged. Yet there are $\frac{n}{b}$ different possible partions of an interval of size $n$, thus reducing the probability that a particular maliciously crafted fingerprint collision affects a given communication round by that factor.
+
+In order to minimize the probability that a collision affects a protocol run, interval boundaries can be chosen fully at random, for a total of $\binom{n}{b}$ possible outcomes. The worst-case number of communication rounds occurs when in every round $b-1$ of the interval contain exactly one item and the last interval contains all the remaining items, leading to $\frac{n}{b - 1}$ rounds. The expected number of rounds is however still $\complexity{\log_b(n)}$ with high probability, as it corresponds to the height of a randomly chosen $b$-complete tree, which is expected $\complexity{\log_b(n)}$~\cite{devroye1990height}.
+
+A simple way of recovering a logarithmic worst-case round number while keeping the number of possible partions super-linear is to choose the boundaries randomly within equally sized regions of the interval: choose $i_j$ randomly from $\interval{j \cdot \frac{n}{b}}{(j + 1) \cdot \frac{n}{b}}{\N}$ (and take $i_{b - 1}$ modulo $n$ if necessary). The number of possible outcomes is $(\frac{n}{b})^b \in \complexity{n^b}$. Since any interval obtained this way can contain most $2b$ items, the worst-case number of communication rounds is $\complexity{\log_{\frac{b}{2}}(n)}$.
 
 \subsection{Computational Complexity}
 
-We now analyze the computational cost incurred by a single communication round, i.e. computing the response to a message. This includes both fingerprint comparisons as well as locating the items to transmit. We do however assume that an auxiliary data structure is available to help with this computation, e.g. the a fingerprint tree structure presented in \cref{TODO}. We exclude both space usage and maintenance cost for this data structure from the per-round complexity.
+We now analyze the computational cost incurred by a single communication round, i.e. computing the response to a message. This includes both fingerprint comparisons as well as locating the items to transmit. We do however assume that an auxiliary data structure is available to help with this computation, e.g. the a fingerprint tree structure presented in \cref{group-fingerprints}. We exclude both space usage and maintenance cost for this data structure from the per-round complexity.
 
 We will assume that transferring an item as part of an interval item set requires $\complexity{1}$ time and space. The relevant computational overhead per communication round thus consists of computing $\fp{\interval{x}{y}{X_i}}$ for every received interval fingerprint $\ifp{x}{y}{X_j}$, as well as partitioning $\interval{x}{y}{X_i}$ in case of a mismatch and computing the fingerprints over all subintervals. These computations can be performed independently for all received interval fingerprints, so in particular they can be performed sequentially, reusing space. The overall space complexity of the per-round computations is equal to that of the computations for a single interval fingerprint.
 
-A naive approach is to query the auxiliary data structure for each received interval fingerprint individually. The maximum amount of queries is upper-bounded by $n$, it is certainly impossible to receive more than $n$ interval fingerprints within a single communication round. Unfortunately, the greatest possible number of interval fingerprints within a single round corresponds to the number of leaves in the recursion tree, which is in $\complexity{n}$. The auxiliary data structure requires $\complexity{\mathit{log}(n)}$ time, leading to an overall $\complexity{n \cdot \mathit{log}(n)}$.
+We first address the problem of partitioning intervals. After the indices of the boundaries have been determined as described in the previous section, how can they be efficiently translated into actual items? This can be accomplished by augmenting the auxiliary tree structure by storing in each vertex $v$ the number of vertices in $T_v$. With this information, one can efficiently traverse the tree based on relative offsets on the number of items to traverse.
 
-We can bring this down to $\complexity{\mathit{log}(n) + n_{\triangle}}$ by augmenting the auxiliary data structure with parent-pointers to allow efficient in-order traversal, and by memoizing some intermediate fingerprint computation results. TODO (write fingerprint chapter first)
+The problem thus consists of computing $k \cdot (b + 1)$ fingerprints in the worst case, where $k$ is the number of interval fingerprints that have been received - one fingerprint computation per received fingerprint to compare the received fingerprint with the local one, and then $b$ further ones for splitting the interval.
+
+A naive approach is to query the auxiliary data structure for each fingerprint to compute individually. The maximum amount of queries is upper-bounded by $n$, as $n$ items cannot be split into more than $n$ non-empty intervals. Unfortunately, the greatest possible number of interval fingerprints within a single round corresponds to the number of leaves in the recursion tree, which is in $\complexity{n}$. The auxiliary data structure requires $\complexity{\log(n)}$ time per query, leading to an overall time complexity of $\complexity{n \cdot \log(n)}$.
+
+In the next section, by doing a smarter traversal of the auxiliary tree, we can bring this down to $\complexity{\min(\log(n), n)}$ time while staying in $\complexity{1}$ space usage for fingerprints based on a group operation.
+
+\section{Bulk Fingerprint Computation}
+
+The two main components of efficiently computing fingerprints for multiple, successive intervals are doing a traversal of the auxiliary tree with a linear bound on the number of traversed edges, and the computation of fingerprints based on the data encountered in this traversal.
+
+\subsection{Tree Traversal}
+
+We express the tree traversal as a function which takes as arguments the vertex at which to start and the vertex to seek, and returns this vertex, or \texttt{Nothing} if it is not in the tree. Since any particular vertex might be reached multiple times during a traversel, an additional argument specifies the direction in which to search: either a vertex is reached from its parent with the goal of exploring into the subtree rooted at the vertex, or a vertex is reached from one of its children, with the goal of continuing the search outside the subtree that was just left. Ultimately, this is a generalization of the usual function for finding an element in a search tree, allowing to specify an arbitrary starting vertex rather than always beginning in the root.
+
+To allow upward traversal in the tree, we store in each vertex a reference to its parent, if one exists. As usual, we restrict the presentation of algorithms to complete binary trees.
+
+\begin{minted}[mathescape]{haskell}
+-- Last member this the parent pointer.
+data Node = Leaf U D (Maybe Node) | Inner Node U Node D (Maybe Node)
+
+-- Extract the parent pointer of a node.
+getParent :: Node -> Maybe Node
+getParent Leaf _ _ p     = p
+getParent Inner _ _ _ _ p = p
+
+-- Extract the item of a node.
+getItem:: Node -> U
+getItem Leaf v _ _     = v
+getItemInner _ v _ _ _ = v
+
+data Direction = FromParent | FromLeftChild | FromRightChild
+
+-- Return $\mathtt{Just FromLeftChild}$ and the parent if the given node is a left child,
+-- $\mathtt{Just FromRightChild}$ and the parent if the given node is a right child,
+-- and $\mathtt{Nothing}$ otherwise. Also returns the parent.
+parentDirection :: Node -> Maybe (Direction, Node)
+parentDirection v = case (getParent v) of
+    Nothing -> Nothing
+    Just p  -> if ((getItem v) < (getItem p))
+        then (Just (FromLeftChild, p))
+        else (Just (FromRightChild, p))
+
+-- Search for the item $\mathtt{x}$ starting at node $\mathtt{src}$.
+traverse :: Node -> Direction -> U -> (Maybe Node, Direction)
+traverse src@(Leaf v d p) _ x
+    | x <= v    = (Just src,  -- $\mathtt{src}$ is the least vertex with  $\mathtt{x} \preceq v$
+    | otherwise = case (parentDirection src) of
+        Nothing     -> (Nothing, FromRightChild) -- $\mathtt{x}$ greater than any item
+        Just (direction, parent) -> traverse parent direction x -- continue search upwards
+traverse src@(Inner l v r _ p) FromParent x
+    | x < v  = traverse l FromParent x
+    | x == v = (Just src, FromParent)
+    | x > v  = traverse r FromParent x
+traverse src@(Inner l v r _ p) FromLeftChild x
+    | x <= v    = (Just src, FromParent)
+    | otherwise = traverse r FromParent x
+traverse src@(Inner l v r _ p) FromRightChild x = case (parentDirection src) of
+    Nothing     -> (Nothing, FromRightChild) -- $\mathtt{x}$ greater than any item
+    Just (direction, parent) -> traverse parent direction x -- continue search upwards
+\end{minted}
+
+\Cref{fig:traverse} gives an example of how the \texttt{traverse} function operates and can be used to visit multiple vertices in succession.
+
+
+\newcommand{\traverse}[3]{\texttt{(traverse #1 #2 #3)}}
+\newcommand{\mypair}[2]{\texttt{(#1, #2)}}
+\tikzmath{\w = 0.5; \h = 0.4; \hi = 0.2; }
+
+\begin{figure*}
+\begin{scaletikzpicturetowidth}{\textwidth}
+\begin{tikzpicture}[scale=\tikzscale]
+	\pgfdeclarelayer{background}
+	\pgfdeclarelayer{foreground}
+	\pgfsetlayers{background,main,foreground}
+	
+	\begin{pgfonlayer}{main}
+		%vertices
+		\node (vroot) at (0, 1) [skiplistnode] {\exampled};
+
+		\node (v00) at (-4, -1) [skiplistnode] {\exampleb};
+		\node (v01) at (4, -1) [skiplistnode] {\exampleg};
+
+                \node (v10) at (-6, -3) [skiplistnode] {\examplea};
+                \node (v11) at (-2, -3) [skiplistnode] {\examplec};
+                \node (v12) at (2, -3) [skiplistnode] {\examplee};
+                \node (v13) at (6, -3) [skiplistnode] {\exampleh};
+		%edges
+                \draw [preaction={draw, line width=3pt, red, transform canvas={xshift=1cm}}](vroot) edge[edge] (v00);
+                \draw (vroot) edge[edge] (v01);
+
+		\draw (v00) edge[edge] (v10);
+		\draw (v00) edge[edge] (v11);
+		\draw (v01) edge[edge] (v12);
+		\draw (v01) edge[edge] (v13);
+
+\draw[->,blue,rounded corners,dashed,line width=0.7pt]
+    ($(vroot) + (-\w,\h)$) --
+    ($(v00) +(-\w,\h)$) --
+    ($(v00) +(-\w,-\h)$) --
+    ($(v11) +(-\w,-\h)$) --
+    ($(v11) +(\w,-\h)$);
+
+\draw[->,green,rounded corners,dashed,line width=0.7pt]
+    ($(v11) +(\w,-\h)$) --
+    ($(v11) +(\w,\h)$) --
+    ($(v00) +(\w,-\hi)$) --
+    ($(v00) +(\w,0)$) --
+    ($(vroot) +(-\w,-\h)$) --
+    ($(vroot) +(\w,-\h)$) --
+    ($(v01) +(-\w,0)$) --
+    ($(v01) +(-\w,-\hi)$) --
+    ($(v12) +(-\w,\h)$) --
+    ($(v12) +(-\w,-\h)$) --
+    ($(v12) +(\w,-\h)$) --
+    ($(v01) +(0,-\h)$);
+
+\draw[->,red,rounded corners,dashed,line width=0.7pt]
+    ($(v01) +(0,-\h)$) --
+    ($(v13) +(-\w,-\h)$) --
+    ($(v13) +(\w,-\h)$) --
+    ($(v13) +(\w,\h)$) --
+    ($(v01) +(\w,\h)$) --
+    ($(vroot) +(\w,\h)$);
+	\end{pgfonlayer}
+\end{tikzpicture}
+\end{scaletikzpicturetowidth}
+
+\begin{align*}
+\traverse{\exampled}{FromParent}{\examplec} &= \traverse{\exampleb}{FromParent}{\examplec}\\
+&= \mypair{Just \examplec}{FromParent}\\
+\\
+\traverse{\examplec}{FromParent}{\examplef} &= \traverse{\exampleb}{FromRightChild}{\examplef}\\
+&= \traverse{\exampled}{FromLeftChild}{\examplef}\\
+&= \traverse{\exampleg}{FromParent}{\examplef}\\
+&= \traverse{\examplee}{FromParent}{\examplef}\\
+&= \mypair{Just \exampleg}{FromLeftChild}\\
+\\
+\traverse{\exampleg}{FromLeftChild}{\exampley}&= \traverse{\exampleh}{FromParent}{\exampley}\\
+&= \traverse{\exampleg}{FromRightChild}{\exampley}\\
+&= \traverse{\exampled}{FromRightChild}{\exampley}\\
+&= \mypair{Nothing}{FromRightChild}\\
+\end{align*}
+\caption{
+Traversing a search tree: starting from the root, visiting \examplec\ (blue, found in the tree), \examplef\ (green, not in the tree, but finding the next greater item \exampleg), and \exampley\ (red, greater than any item in the tree) in succession.
+}
+
+\label{fig:traverse}
+\end{figure*}
+
+As this is a standard tree traversal independent from our fingerprint computations, we merely state the following observations without proof:
+
+\begin{itemize}
+\item Every edge is traversed at most two times, once in each direction.
+\item Consequently, every vertex is visited at most once from its parent, and at most three times in total.
+\item For $x, y \in U$ with $x \prec y$, the traversal from $x$ to $y$ in a tree on the item set $S$ takes at most $\complexity{\log_2(\abs{\interval{x}{y}{S}})}$ time.
+\end{itemize}
+
+As traversals take logarithmic time in the distance between the items, and successive traversals to successively greater items can overall visit any particular vertex at most a constant number of times, the time complexity for performing $k$ such traversals in a set of size $n$ is in $\complexity{\min(k \cdot \log(n), n)}$. The space complexity is in $\complexity{1}$, since the function is tail-recursive.
+
+\subsection{Computing Fingerprints}
 
 \section{Smaller Optimizations}
 \label{set-reconciliation-simple-optimizations}
@@ -315,7 +484,7 @@ TODO precomputation, see comment %https://piazza.com/class_profile/get_resource/
 
 A naive encoding of interval fingerprints and interval item sets would transmit both boundaries of every interval, transmitting $2n$ items if there are $n$ intervals in a message. This can be brought down to $1 + n$ by utilizing that the lower boundary of all but the first interval it is also the upper boundary of the preceding one. An efficiently encoded message consists of the number of intervals it contains, followed by the lower boundary of the first interval, followed by pairs of interval information and the upper boundary of the interval that the information pertains to, where each \defined{interval information} is either a fingerprint, a set of items, or a dummy value signaling that this part of the overall interval is already fully synchronized.
 
-The knowledge that interval boundaries are transmitted in ascending order can be used for compression. As a simple example, if interval boundaries are natural numbers, the upper boundaries can be transmitted as the difference to the previous boundary. This way, smaller numbers are transmitted, which admit shorter encodings. The same argument applies for transmitting sets of items in sorted order. TODO point to literature
+The knowledge that interval boundaries are transmitted in ascending order can be used for compression. As a simple example, if interval boundaries are natural numbers, the upper boundaries can be transmitted as the difference to the previous boundary. This way, smaller numbers are transmitted, which admit shorter encodings. The same argument applies for transmitting sets of items in sorted order.
 
 Note additionally that two adjacent interval item sets can be merged into a single one, saving on the transmission of the boundary between them.
 
