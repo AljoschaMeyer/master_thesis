@@ -358,6 +358,91 @@ As a closing remark on these computations, we want to point out that associativi
 
 Optimized tree implementations thus have higher branching and store multiple items per vertex, a typical example being B-trees~\cite{bayer2002organization}. Our fingerprinting scheme admits such optimized implementations, in particular different nodes that want to synchronize data can choose their implementation techniques fully independently and yet maintain compatibility.
 
+\subsection{Bulk Fingerprint Computation}
+\label{bulk}
+
+The synchronization protocols partition item sets into disjoint intervals. When computing the fingerprint of $k$ such intervals using the previous algorithms, the overall time complexity is $\complexity{k \cdot \log(\abs{S})}$. This is worse than the overall $\complexity{\abs{S}}$ vertices and edges in the tree, because there is some amount of redundancy in these independent computations. For example, every single computation touches the root node, roughly half of them touch each of the root's children, etc.
+
+We can bound the complexity of multiple fingerprint computation for disjoint intervals by $\complexity{\abs{S}}$ by performing a more efficient tree traversal which visits any given vertex at most twice. This is simply achieved by starting at the lower boundary of the first interval, then tracing the (unique) path to the upper boundary of the first interval, which is also the lower boundary of the second interval, so from here the path to the upper boundary of the second interval can be traced, and so on.
+
+Thus we consider a traversal algorithm that traces the shortest path from some vertex $x$ to another vertex $y$ with $x \preceq y$. We express the traversal as a function which takes his arguments some vertex $y$ to search for and a starting vertex $x$, which returns the next vertex on the shortest path from $x$ to the least vertex $z$ such that $y \preceq z$, or $\nil$ if no such $z$ exists or the traversal has finished, i.e. $x = z$.
+
+Since we use the traversal for the computation of fingerprints over successive intervals, the tree is always traversed from a lesser to a strictly greater node. During a traversal, the function can be called with $y \preceq x$, but only if $x$ lies on the shortest path from some $w \prec y$ to $z$. The definition we give does not correctly handle inputs for which this does not hold, it cannot perform backward traversals.
+
+If the function is to trace of the shortest path in $\complexity{1}$ space, the decision which vertex to move to must be based on local information only. A vertex $x$ however does not store enough information to determine whether the target vertex $y$ can be reached by a downward traversal starting at $x$ or whether one first needs to find a common ancestor of $x$ and $y$. To enable this decision, we store in each vertex a reference to its greatest descendent.
+
+To allow upward traversal in the tree in $\complexity{1}$ space, we store in each vertex a reference to its parent, if one exists. As usual, we restrict the presentation of the algorithm to complete binary trees.
+
+\begin{minted}[mathescape]{haskell}
+-- Second-to-last member of inner nodes is a pointer to the greatest
+-- descendent, last member of all nodes is the parent pointer.
+data Node = Leaf U D (Maybe Node) | Inner Node U Node D Node (Maybe Node)
+
+value :: Node -> U
+value Leaf v _ _ = v
+value Inner _ v _ _ _ _ _ = v
+
+greatestDescendent :: Node -> Node
+greatestDescendent v@(Leaf _ _ _) = v
+greatestDescendent Inner _ _ _ _ _ g _ = g
+
+-- Return the next vertex on the shortest path
+-- from $\mathtt{x}$ to the least vertex $\mathtt{z}$ with $\mathtt{y} \preceq \mathtt{z}$,
+-- assuming there exists $\mathtt{w} \prec \mathtt{y}$ such that $\mathtt{x}$ lies
+-- on the shortest path from $\mathtt{w}$ to $\mathtt{z}$.
+next :: Node -> U -> Maybe Node
+next (Leaf _ _ p) y
+    | x < y  = p
+    | x >= y = Nothing
+next (Inner l x r _ g p) y
+    | (value g) < y = p
+    | y < x && ((value (greatestDescendent l)) >= y)  = Just l
+    | y > x  = Just r
+    | otherwise = Nothing -- traversal done
+\end{minted}
+
+Since paths in trees are unique, this traversal touches the same vertices as \texttt{intervalFingerprint} excluding those visited during the execution of \texttt{findInitial}. The fingerprint can thus also be computed during the traversal, by maintaining a single bit of state indicating whether the traversal is in the upward or downward phase:
+
+\begin{minted}[mathescape]{haskell}
+data Phase = Up | Down
+
+isPeak :: Node -> U -> Bool
+isPeak src@(Leaf _ _ p) y = (next src y) == p
+isPeak src@(Inner _ _ _ _ _ p) y = (next src y) == p
+
+-- Compute the fingerprint for the interval $\interval{x}{y}{S}$,
+-- and also return the last vertex of the traversal.
+-- The accumulator must initially be $\mathtt{emptyFp}$, the phase $\mathtt{Up}$,
+-- and the starting vertex of the traversal $\mathtt{x}$.
+computeFingerprint :: D -> Phase -> Node -> U -> U -> (D, Node)
+-- Phase $\mathtt{Up}$ correspondends to computing $\mathtt{accGeq}$.
+computeFingerprint acc Up src@(Leaf v fp _) x y = case (next src y) of
+    Nothing
+        | v < x = (acc, src)
+        | otherwise = (combine emptyFp (liftFp fp) acc, src)
+computeFingerprint acc Up src@(Inner _ v r _ _ _) x y = case (next src y) of
+    Nothing
+        | v < x = (acc, src)
+        | otherwise = (combine emptyFp (liftFp (hash v)) acc, src)
+    Just n
+        | isPeak src y -> computeFingerprint (combine emptyFp (liftFp (hash v)) acc) Down n x y
+        | otherwise && v < x -> computeFingerprint acc Up n x y
+        | otherwise -> computeFingerprint (combine (liftFp (hash v)) (label r) acc) Up n x y
+-- Phase $\mathtt{Down}$ correspondends to computing $\mathtt{accLt}$.
+computeFingerprint acc Down src@(Leaf v fp _) x y =
+    | v >= x = (acc, src)
+    | otherwise = (combine acc (liftFp fp) emptyFp, src)
+computeFingerprint acc Down src@(Inner l v _ _ _ _) x y = case (next src y) of
+    Nothing
+        | v >= y = (acc, src)
+        | otherwise = (combine acc (liftFp (label l) (hash v)), src)
+    Just n
+        | v >= y -> computeFingerprint acc Down n x y
+        | otherwise -> computeFingerprint (combine acc (label l) (liftFp (hash v))) Down n x y
+\end{minted}
+
+By computing the fingerprints of successive intervals via this function, using the output vertex as the starting point for the next traversal, the fingerprints are computed while traversing any edge at most two times (once during a downward traversal, and once during an upward traversal). The overall time complexity for $k$ intervals is thus in $\complexity{\min(k \cdot \log(\abs{S}), \abs{S})}$. Since the function is tail recursive, the space overhead is in $\complexity{1}$.
+
 \subsection{Differences to Homomorphic Hashing}
 
 The construction of lifting a function to sets resembles that of multiset homomorphic hash functions, introduced in \cite{clarke2003incremental}, with further instantiations given in \cite{cathalo2009comparing} and \cite{maitin2017elliptic}. We briefly define multiset homomorphic hashing in order to point out salient differences to our construction.
