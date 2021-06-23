@@ -610,6 +610,7 @@ All of these arguments are however purely qualitative and should as such be take
 In a system with a consensus mechanism among all participating nodes, the choice of $\f$ can periodically be changed, with the frequency being some function of the time it takes to find a viable collision, the cost of rebuilding all auxiliary data structures, and the general level of paranoia among the participating nodes. The $\complexity{n}$ cost of rebuilding the data structures is then being amortized over the number of synchronization sessions occurring between rebuilds, which is still an improvement over protocols that need to perform $\complexity{n}$ computations per synchronization session.
 
 \subsection{Specific Monoids}
+\label{specific-monoids}
 
 Multiplication, addition and xor as a way of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
 

@@ -11,7 +11,7 @@ The set reconciliation protocol assumes that there is a set $U$, a linear order 
 Recall that $\interval{x}{y}{S}$ denotes the set $\set{s \in S \mid x \preceq s \prec y}$ if $x \prec y$, or $S \setminus \interval{y}{x}{S}$ if $y \preceq x$ (\cref{def-interval}).
 
 $\mathcal{X}_0$ and $\mathcal{X}_1$ exchange messages over multiple rounds, a message consists of an arbitrary number of \defined{interval fingerprints} and \defined{interval item sets}.
-An interval fingerprint is a triple $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a four-tuple $\iis{x}{y}{S}{b}$ for $x, y \in U$, $S \subseteq \interval{x}{y}{X_i}$, and $b \in \{0, 1\}$. $b$ indicates whether the interval item set is a response to a previous interval item set.
+An interval fingerprint is a triplet $\ifp{x}{y}{X_i}$ for $x, y \in U$, an interval item set a four-tuple $\iis{x}{y}{S}{b}$ for $x, y \in U$, $S \subseteq \interval{x}{y}{X_i}$, and $b \in \{0, 1\}$. $b$ indicates whether the interval item set is a response to a previous interval item set.
 
 When a node $\mathcal{X}_i$ receives a message, it performs the following actions:
 
@@ -288,6 +288,8 @@ In order to minimize the probability that a collision affects a protocol run, in
 
 A simple way of recovering a logarithmic worst-case round number while keeping the number of possible partions super-linear is to choose the boundaries randomly within equally sized regions of the interval: choose $i_j$ randomly from $\interval{j \cdot \frac{n}{b}}{(j + 1) \cdot \frac{n}{b}}{\N}$ (and take $i_{b - 1}$ modulo $n$ if necessary). The number of possible outcomes is $(\frac{n}{b})^b \in \complexity{n^b}$. Since any interval obtained this way can contain most $2b$ items, the worst-case number of communication rounds is $\complexity{\log_{\frac{b}{2}}(n)}$.
 
+Finally note that if reconciliation is initiated by one node sending the fingerprint over all its items, no randomization is involved in this first round, which could be utilized by the malicious actor crafting fingerprint collisions. To protect against this, the first reconciliation round should already start with sending $b$ (randomized) interval fingerprints. Or in other words, a node wishing to initiate reconciliation simply acts as if it had just received an interval fingerprint over the whole universe not matching the fingerprint over all its items. In addition to protecting against fingerprint collisions this also reduces the number of communication rounds by one, though at the cost of having sent an unnecessary amount of data if both nodes are both holding the same set of items.
+
 \subsection{Computational Complexity}
 
 We now analyze the computational cost incurred by a single communication round, i.e. computing the response to a message. This includes both fingerprint comparisons as well as locating the items to transmit. We do however assume that an auxiliary data structure is available to help with this computation, e.g. the a fingerprint tree structure presented in \cref{group-fingerprints}. We exclude both space usage and maintenance cost for this data structure from the per-round complexity.
@@ -316,14 +318,12 @@ When partitioning an interval into subintervals, the protocol does not specify w
 
 When a node $\mathcal{X}_i$ receives an interval fingerprint $\ifp{x}{y}{X_j}$, it might have a different fingerprint for that interval, but one of the resulting subintervals could match the received fingerprint. The node can then ignore that interval, transmitting only the remaining ones.
 
-This scenario is a special case of receiving the fingerprint of a subset of the item one holds within an interval. In principle, a node can compute the fingerprints of arbitrary subsets of its interval, trying to find a match. If a match is found, the node knows that it holds a superset of the items the other node holds within the interval. The protocol could be extended with a message part that transmits items and does not warrant a response, this would be used to transmit $\interval{x}{y}{X_i} \setminus \interval{x}{y}{X_j}$.
+This scenario is a special case of receiving the fingerprint of a subset of the items one holds within an interval. In principle, a node can compute the fingerprints of arbitrary subsets of its interval, trying to find a match. If a match is found, the node knows that it holds a superset of the items the other node holds within the interval. The protocol could be extended with a message part that transmits items and does not warrant a response, this would be used to transmit $\interval{x}{y}{X_i} \setminus \interval{x}{y}{X_j}$.
 
-Computing the fingerprint of all subsets of interval is infeasible since they are $2^n$ many subsets. As discussed in \cref{TODO} however, if the group operation for fingerprint computation is xor, a node can check whether the fingerprint of a subset of items matches a given fingerprint in $\complexity{n^3}$.
+Computing the fingerprint of all subsets of an interval is infeasible since there are $2^n$ many subsets. As discussed in \cref{specific-monoids} however, if the group operation for fingerprint computation is xor, a node can check whether the fingerprint of a subset of items matches a given fingerprint in $\complexity{n^3}$.
 Assuming no fingerprint collisions occurred, checking whether a subset of $\interval{x}{y}{X_i}$ matches $\fp{\interval{x}{y}{X_j}}$ is equivalent to checking whether $\interval{x}{y}{X_i}$ is a superset of $\interval{x}{y}{X_j}$.
 
-This leads to a protocol with a per-round computational complexity of $\complexity{n^3}$ TODO $n^4$? and the same worst-case guarantees, but which can skip recursive steps more often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
-
-TODO precomputation, see comment %https://piazza.com/class_profile/get_resource/jl30kcwntnn7f1/jlh5nh8gwuh11s
+This leads to a protocol with a per-round computational complexity of $\complexity{n^4}$\footnote{This can be brought down to $\complexity{n^3}$ by using techniques for solving multiple systems of linear equations based on the same matrix more efficiently, e.g. by precomputing a LU decomposition or a QR decomposition.} ($\complexity{n}$ fingerprint computations of complexity $\complexity{n^3}$ each) and the same worst-case guarantees as the basic protocol, but which can skip recursive steps more often than the basic protocol. In particular, whenever two nodes reconcile where one of them holds a subset of the items of the other node, reconciliation terminates after at most three communication rounds.
 
 \subsection{Efficiently Encoding Intervals}
 
