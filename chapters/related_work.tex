@@ -1,5 +1,19 @@
 % !TEX root = ../main.tex
 
+The range-based approach to set reconciliation has been employed as an implementation detail for a specific use case in~\cite{chen1999prototype} section 3.6 and~\cite{shang2017survey} section II.A\footnote{We cite a survey because there is no standalone publication on CCNx 0.8 Sync. The survey refers to online documentation at \texttt{https://github.com/ProjectCCNx/ccnx/blob/master/doc/technical/SynchronizationProtocol.txt}}. Neither work studies it as a self-contained approach of interest to the set reconciliation problem, consequently the treatment is rather superficial, e.g. neither work considers collision resistance even though it is relevant to both settings. Considering the simplicity of the approach, there may well be further publications reusing or reinventing it. To the best of our knowledge, there is no prior work dedicated to the algorithm itself.
+
+\section{Fingerprinting Sets}
+
+As range based synchronization relies on fingerprinting sets, we give a small overview over work on that topic. Some of these references have already come up with in this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
+
+The earliest mention of hashing into a group and performing computations on hashes to compactly store information about sets that we could find is in~\cite{wegman1981new}. They provide probabilistic set equality testing, but without maintaining any tree structure, effectively anticipating (cryptographically insecure) homomorphic fingerprinting.
+
+Merkle trees~\cite{merkle1989certified} introduce the idea of maintaining hashes in a tree to allow efficient updating without a group structure on the hashes. Since the exact shape of the tree determines the root label, unique representations of sets as trees are of interest. \cite{uniquerepresentation} proves the important negative result that in general unique representations require superlogarithmic time to maintain under insertions and deletions. \cite{sundar1994unique} gives logarithmic solutions for sparse or dense sets and points to further deterministic solutions.
+
+Unique representations with probabilistic time complexities that are logarithmic in the expected case have been studied in~\cite{pugh1989incremental}, suggesting hash-tries as a set representation for computing hashes. Pugh also developed skip lists~\cite{pugh1990skip}, a probabilistic set representation not based on trees. \cite{seidel1996randomized} offers treaps, another randomized tree structure. Further study of uniquely represented data structures has been done under the moniker of \textit{history-independent data structures}, including IO-efficient solutions for treaps~\cite{golovin2009b} and skip list~\cite{bender2016anti} in an \textit{external memory} computational model.
+
+TODO
+
 \begin{itemize}
   \item set reconciliation literature
   \item hash graph synchronization

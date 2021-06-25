@@ -1,162 +1,164 @@
 % !TEX root = ../main.tex
 
-One of the problems that needs to be solved when designing a distributed system is how to efficiently synchronize data between nodes.
-Two nodes may each hold a particular set of data, and may then wish to exchange the ideally minimum amount of information until they both reach the same state.
-Typical ways in which this can happen are one node taking on the state of the other, or both nodes ending up with the union of information available between the two of them.
+Bla
 
-\section{Motivating Examples}
-
-Distributed version control systems can be seen as an example of the latter case: users independently create new objects which describe changes to a directory, and when connecting to each other, they both fetch all new updates from the other in order to obtain a (more) complete version history.
-Regarded more abstractly, the two nodes compute the union of the sets of objects they store.
-A version control system might attempt to leverage structured information about those objects, such as a happened-before relation, but this does not lead to good worst-case guarantees.
-The set reconciliation protocol we give guarantees the exchange to only take a number of rounds logarithmic in the number of objects.
-
-A different example are peer-to-peer publish-subscribe systems such as
-Secure Scuttlebutt~\cite{tarr2019secure}. A node in the system can subscribe to
-any number of topics, and nodes continuously synchronize all topics they share
-with other nodes they encounter on a randomized overlay network. Scuttlebutt achieves
-efficient synchronization by enforcing a linear happened-before
-relation between messages published to the same topic, i.e.~each message
-is assigned a unique sequence number that is one greater than the
-sequence number of the previous message. When two nodes share interest
-in a topic, they exchange the greatest sequence number they have for
-this topic, whichever node sent the greater one then knows which
-messages the other is missing.
-
-The price to pay for this efficient protocol is that concurrent publishing of new
-messages to the same topic is forbidden, since it would lead to
-different messages with the same sequence number, breaking correctness
-of the synchronization procedure. An unordered pubsub mechanism based on
-set reconciliation would be able to support concurrent publishing, the
-other design aspects such as the overlay network could be left
-unchanged.
-
-An example from a less decentralized setting are incremental software
-updates. A server might host a new version of an operating system, users
-running an old version want to efficiently download the changes. An
-almost identical problem is that of efficiently creating a backup of a file
-system to a server already holding an older backup. Both of these
-examples can abstractly be regarded as updating a map from file paths to
-file contents. Our protocol for mirroring maps could be used for
-determining which files need to be updated. The protocol allows
-synchronizing the actual files via an arbitrary nested synchronization
-protocol, e.g.~rsync~\cite{tridgell1996rsync}.
-
-\section{Efficiency Criteria}\label{efficiency-criteria}
-
-There are a variety of criteria by which to evaluate a synchronization
-protocol. We exemplify them by the trivial synchronization protocol,
-which consists of both node immediately sending all their data to the
-other node.
-
-Let $n$ be the number of items held by node $\mathcal{A}$, and $m$ the number of items
-held by node $\mathcal{B}$. To simplify things we assume for now that all items have
-the same size in bytes.
-
-The most obvious efficiency criteria are the \defined{total bandwidth}
-($\complexity{n + m}$ bytes for the trivial protocol) and the number of
-\defined{round-trips} ($1 \in \complexity{1}$ for the trivial protocol).
-
-Efficiently using the network is not everything, the computational
-\defined{time complexity per round-trip} must be feasible so that
-computers can actually run the protocol. It is lower-bounded by the
-amount of bytes sent in a given round, for the trivial protocol it is
-$\complexity{n + m}$.
-
-Similarly, the \defined{space complexity per round-trip} plays a relevant
-role, since computers have only a limited amount of memory. In
-particular, if an adversarial node can make a node run out of memory,
-the protocol can only be run in trusted environments. Even then, when
-non-malicious nodes of vastly differing computational capabilities
-interact (e.g.~a microcontroller connecting to a server farm),
-``accidental denial of service attacks'' can easily occur. Since the
-trivial protocol does not perform any actual computation, its space
-complexity per round-trip is in $\complexity{1}$.
-
-The \defined{space complexity per session} measures the amount of state
-nodes need to store across an entire synchronization session, in particular
-while idly waiting for a response.
-
-In addition to the space required for per-round-trip computations and per session, an
-implementation of a protocol might need to store auxiliary information
-that is kept in sync with the data to be synchronized, in order to
-achieve sufficiently efficient time and space complexity per round-trip.
-Of interest is not only the \defined{space for the auxiliary
-information}, but also its \defined{update complexity} for keeping it
-synchronized with the underlying data.
-
-A protocol might be asymmetric, with different resource usage for different nodes.
-If there is client and a clear server role, traditionally protocol designs aim to
-keep the resource usage of the server as low as possible, motivated by the assumption
-that many clients might concurrently connect to a single server, but a single client rarely
-connects to a prohibitive amount of servers at the same time.
-
-Any protocol design has to settle on certain trade-offs between these
-different criteria, which will make it suitable for certain use cases,
-but unsuitable for others. We do believe that our designs occupy a
-useful place in the design space that is applicable to many relevant
-problems, such as those mentioned in the introduction.
-
-A final, ``soft'' criterium is that of simplicity. While ultimately time
-and space complexities should guide adoption decisions, complicated
-designs are often a good indicator that the protocol will never see any
-deployment. Our designs require merely comparisons of (sums of) hashes,
-and the auxiliary data structure that enables efficient implementation
-is a simple balanced tree.
-
-\section{Recursively Comparing
-Fingerprints}\label{recursively-comparing-fingerprints}
-
-We conclude the introduction with a brief sketch of a set reconciliation
-protocol (i.e.~a protocol for computing the union of two sets on
-different machines) that exemplifies the core ideas. The protocol
-leverages the fact that sets can be partitioned into a number of smaller
-subsets. The protocol assumes that the sets contain elements from
-a universe on which there is a total order based on which intervals can be
-defined, and that nodes can compute fingerprints for any subset of the
-universe.
-
-Suppose for example two nodes $\mathcal{A}$, $\mathcal{B}$ each hold a set of natural numbers.
-They can reconcile all numbers within an interval as follows: $\mathcal{A}$ computes
-a fingerprint over all the numbers it holds within the interval and then sends this
-fingerprint to $\mathcal{B}$, together with the interval boundaries. $\mathcal{B}$ then computes
-the fingerprint over all numbers it holds within that same interval. There
-are three possible cases:
-
-\begin{itemize}
-\item
-  $\mathcal{B}$ computed the same fingerprint it received, then the interval is considered to be fully reconciled and the protocol terminates. This makes the protocol probabilistic, it is only reliable if the probability of two different sets having the same fingerprint is negligible.
-\item
-  $\mathcal{B}$ has no numbers within the interval, $\mathcal{B}$ then notifies $\mathcal{A}$, $\mathcal{A}$
-  transmits all its numbers from the interval, and the interval has been
-  fully reconciled.
-\item
-  Otherwise, $\mathcal{B}$ splits the interval into two sub-intervals, such that $\mathcal{B}$
-  has a roughly equal number of numbers within each interval. $\mathcal{B}$ then
-  initiates reconciliation for both of these intervals, the roles $\mathcal{A}$ and
-  $\mathcal{B}$ reverse.
-\end{itemize}
-
-Crucially, in the last case, the two recursive protocol invocations can
-be performed in parallel. The number of parallel sessions increases
-exponentially, so the original interval is being reconciled in a number
-of rounds logarithmic in the greater number of items held by any node
-within that interval.
-
-\section{Thesis Outline}
-
-The remainder of this thesis fleshes out details and applies the same
-idea to some data structures, all of which share the property that they can be partitioned into smaller instances of the same data structure.
-
-The viability of this approach
-hinges on the efficient computation of fingerprints, which is discussed
-and solved in \cref{fingerprints}. We then give a thorough definition of the set
-conciliation protocol in \cref{basic-set-reconciliation}, and prove its correctness and its
-complexity guarantees. \Cref{bounded-set-reconciliation} gives a more concrete protocol that
-allows nodes to enforce limits on the amount of computational resources
-they spend, at the cost of increasing the number of roundtrips if these
-resource limits are reached. \Cref{other-data-structures} shows how to apply the same basic
-ideas to k-d-trees, maps, tries and radix trees (TODO update as this cristallizes), and briefly discusses
-why it does not make sense to apply it to arrays. \Cref{related-work}
-gives an overview of related work and justifies the chosen approach. We
-conclude in \cref{conclusion}.
+%One of the problems that needs to be solved when designing a distributed system is how to efficiently synchronize data between nodes.
+%Two nodes may each hold a particular set of data, and may then wish to exchange the ideally minimum amount of information until they both reach the same state.
+%Typical ways in which this can happen are one node taking on the state of the other, or both nodes ending up with the union of information available between the two of them.
+%
+%\section{Motivating Examples}
+%
+%Distributed version control systems can be seen as an example of the latter case: users independently create new objects which describe changes to a directory, and when connecting to each other, they both fetch all new updates from the other in order to obtain a (more) complete version history.
+%Regarded more abstractly, the two nodes compute the union of the sets of objects they store.
+%A version control system might attempt to leverage structured information about those objects, such as a happened-before relation, but this does not lead to good worst-case guarantees.
+%The set reconciliation protocol we give guarantees the exchange to only take a number of rounds logarithmic in the number of objects.
+%
+%A different example are peer-to-peer publish-subscribe systems such as
+%Secure Scuttlebutt~\cite{tarr2019secure}. A node in the system can subscribe to
+%any number of topics, and nodes continuously synchronize all topics they share
+%with other nodes they encounter on a randomized overlay network. Scuttlebutt achieves
+%efficient synchronization by enforcing a linear happened-before
+%relation between messages published to the same topic, i.e.~each message
+%is assigned a unique sequence number that is one greater than the
+%sequence number of the previous message. When two nodes share interest
+%in a topic, they exchange the greatest sequence number they have for
+%this topic, whichever node sent the greater one then knows which
+%messages the other is missing.
+%
+%The price to pay for this efficient protocol is that concurrent publishing of new
+%messages to the same topic is forbidden, since it would lead to
+%different messages with the same sequence number, breaking correctness
+%of the synchronization procedure. An unordered pubsub mechanism based on
+%set reconciliation would be able to support concurrent publishing, the
+%other design aspects such as the overlay network could be left
+%unchanged.
+%
+%An example from a less decentralized setting are incremental software
+%updates. A server might host a new version of an operating system, users
+%running an old version want to efficiently download the changes. An
+%almost identical problem is that of efficiently creating a backup of a file
+%system to a server already holding an older backup. Both of these
+%examples can abstractly be regarded as updating a map from file paths to
+%file contents. Our protocol for mirroring maps could be used for
+%determining which files need to be updated. The protocol allows
+%synchronizing the actual files via an arbitrary nested synchronization
+%protocol, e.g.~rsync~\cite{tridgell1996rsync}.
+%
+%\section{Efficiency Criteria}\label{efficiency-criteria}
+%
+%There are a variety of criteria by which to evaluate a synchronization
+%protocol. We exemplify them by the trivial synchronization protocol,
+%which consists of both node immediately sending all their data to the
+%other node.
+%
+%Let $n$ be the number of items held by node $\mathcal{A}$, and $m$ the number of items
+%held by node $\mathcal{B}$. To simplify things we assume for now that all items have
+%the same size in bytes.
+%
+%The most obvious efficiency criteria are the \defined{total bandwidth}
+%($\complexity{n + m}$ bytes for the trivial protocol) and the number of
+%\defined{round-trips} ($1 \in \complexity{1}$ for the trivial protocol).
+%
+%Efficiently using the network is not everything, the computational
+%\defined{time complexity per round-trip} must be feasible so that
+%computers can actually run the protocol. It is lower-bounded by the
+%amount of bytes sent in a given round, for the trivial protocol it is
+%$\complexity{n + m}$.
+%
+%Similarly, the \defined{space complexity per round-trip} plays a relevant
+%role, since computers have only a limited amount of memory. In
+%particular, if an adversarial node can make a node run out of memory,
+%the protocol can only be run in trusted environments. Even then, when
+%non-malicious nodes of vastly differing computational capabilities
+%interact (e.g.~a microcontroller connecting to a server farm),
+%``accidental denial of service attacks'' can easily occur. Since the
+%trivial protocol does not perform any actual computation, its space
+%complexity per round-trip is in $\complexity{1}$.
+%
+%The \defined{space complexity per session} measures the amount of state
+%nodes need to store across an entire synchronization session, in particular
+%while idly waiting for a response.
+%
+%In addition to the space required for per-round-trip computations and per session, an
+%implementation of a protocol might need to store auxiliary information
+%that is kept in sync with the data to be synchronized, in order to
+%achieve sufficiently efficient time and space complexity per round-trip.
+%Of interest is not only the \defined{space for the auxiliary
+%information}, but also its \defined{update complexity} for keeping it
+%synchronized with the underlying data.
+%
+%A protocol might be asymmetric, with different resource usage for different nodes.
+%If there is client and a clear server role, traditionally protocol designs aim to
+%keep the resource usage of the server as low as possible, motivated by the assumption
+%that many clients might concurrently connect to a single server, but a single client rarely
+%connects to a prohibitive amount of servers at the same time.
+%
+%Any protocol design has to settle on certain trade-offs between these
+%different criteria, which will make it suitable for certain use cases,
+%but unsuitable for others. We do believe that our designs occupy a
+%useful place in the design space that is applicable to many relevant
+%problems, such as those mentioned in the introduction.
+%
+%A final, ``soft'' criterium is that of simplicity. While ultimately time
+%and space complexities should guide adoption decisions, complicated
+%designs are often a good indicator that the protocol will never see any
+%deployment. Our designs require merely comparisons of (sums of) hashes,
+%and the auxiliary data structure that enables efficient implementation
+%is a simple balanced tree.
+%
+%\section{Recursively Comparing
+%Fingerprints}\label{recursively-comparing-fingerprints}
+%
+%We conclude the introduction with a brief sketch of a set reconciliation
+%protocol (i.e.~a protocol for computing the union of two sets on
+%different machines) that exemplifies the core ideas. The protocol
+%leverages the fact that sets can be partitioned into a number of smaller
+%subsets. The protocol assumes that the sets contain elements from
+%a universe on which there is a total order based on which ranges can be
+%defined, and that nodes can compute fingerprints for any subset of the
+%universe.
+%
+%Suppose for example two nodes $\mathcal{A}$, $\mathcal{B}$ each hold a set of natural numbers.
+%They can reconcile all numbers within a range as follows: $\mathcal{A}$ computes
+%a fingerprint over all the numbers it holds within the range and then sends this
+%fingerprint to $\mathcal{B}$, together with the range boundaries. $\mathcal{B}$ then computes
+%the fingerprint over all numbers it holds within that same range. There
+%are three possible cases:
+%
+%\begin{itemize}
+%\item
+%  $\mathcal{B}$ computed the same fingerprint it received, then the range is considered to be fully reconciled and the protocol terminates. This makes the protocol probabilistic, it is only reliable if the probability of two different sets having the same fingerprint is negligible.
+%\item
+%  $\mathcal{B}$ has no numbers within the range, $\mathcal{B}$ then notifies $\mathcal{A}$, $\mathcal{A}$
+%  transmits all its numbers from the range, and the range has been
+%  fully reconciled.
+%\item
+%  Otherwise, $\mathcal{B}$ splits the range into two sub-ranges, such that $\mathcal{B}$
+%  has a roughly equal number of numbers within each range. $\mathcal{B}$ then
+%  initiates reconciliation for both of these ranges, the roles $\mathcal{A}$ and
+%  $\mathcal{B}$ reverse.
+%\end{itemize}
+%
+%Crucially, in the last case, the two recursive protocol invocations can
+%be performed in parallel. The number of parallel sessions increases
+%exponentially, so the original range is being reconciled in a number
+%of rounds logarithmic in the greater number of items held by any node
+%within that range.
+%
+%\section{Thesis Outline}
+%
+%The remainder of this thesis fleshes out details and applies the same
+%idea to some data structures, all of which share the property that they can be partitioned into smaller instances of the same data structure.
+%
+%The viability of this approach
+%hinges on the efficient computation of fingerprints, which is discussed
+%and solved in \cref{fingerprints}. We then give a thorough definition of the set
+%conciliation protocol in \cref{basic-set-reconciliation}, and prove its correctness and its
+%complexity guarantees. \Cref{bounded-set-reconciliation} gives a more concrete protocol that
+%allows nodes to enforce limits on the amount of computational resources
+%they spend, at the cost of increasing the number of roundtrips if these
+%resource limits are reached. \Cref{other-data-structures} shows how to apply the same basic
+%ideas to k-d-trees, maps, tries and radix trees (TODO update as this cristallizes), and briefly discusses
+%why it does not make sense to apply it to arrays. \Cref{related-work}
+%gives an overview of related work and justifies the chosen approach. We
+%conclude in \cref{conclusion}.

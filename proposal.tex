@@ -177,37 +177,37 @@ protocol (i.e.~a protocol for computing the union of two sets on
 different machines) that exemplifies the core ideas. The protocol
 leverages the fact that sets can be partitioned into a number of smaller
 subsets. The protocol assumes that the sets contain elements from
-universe on which there is a total order based on which intervals can be
+universe on which there is a total order based on which ranges can be
 defined, and that nodes can compute fingerprints for any subset of the
 universe.
 
 Suppose for example two nodes A, B each hold a set of natural numbers.
-They can reconcile all numbers within an interval as follows: A computes
-a fingerprint over all the numbers it holds within the interval and then sends this
-fingerprint to B, together with the interval boundaries. B then computes
-the fingerprint of all numbers it holds within that same interval. There
+They can reconcile all numbers within a range as follows: A computes
+a fingerprint over all the numbers it holds within the range and then sends this
+fingerprint to B, together with the range boundaries. B then computes
+the fingerprint of all numbers it holds within that same range. There
 are three possible cases:
 
 \begin{itemize}
 \item
-  B computed the same fingerprint it received, then the interval has
+  B computed the same fingerprint it received, then the range has
   been fully reconciled and the protocol terminates.
 \item
-  B has no numbers within the interval, B then notifies A, A then
-  transmits all its numbers from the interval, and the interval has been
+  B has no numbers within the range, B then notifies A, A then
+  transmits all its numbers from the range, and the range has been
   fully reconciled.
 \item
-  Otherwise, B splits the interval into two sub-intervals, such that B
-  has a roughly equal number of numbers within each interval. B then
-  initiates reconciliation for both of these intervals, the roles A and
+  Otherwise, B splits the range into two sub-ranges, such that B
+  has a roughly equal number of numbers within each range. B then
+  initiates reconciliation for both of these ranges, the roles A and
   B reverse.
 \end{itemize}
 
 Crucially, in the last case, the two recursive protocol invocations can
 be performed in parallel. The number of parallel sessions increases
-exponentially, so the original interval is being reconciled in a number
+exponentially, so the original range is being reconciled in a number
 of rounds logarithmic in the greater number of items held by any node
-within that interval.
+within that range.
 
 The remainder of this thesis fleshes out details and applies the same
 idea to some other data structures. The viability of this approach
@@ -225,7 +225,7 @@ conclude in chapter 7.
 
 \section{Computing Fingerprints}\label{computing-fingerprints}
 
-Let $U$ be the set of items that can be placed inside a data structure. Let $\leq$ be a total order on $U$. For $x, y \in U$, $x \leq y$ and $A \subseteq U$, we write $\interval{x}{y}{A}$ to denote the set $\{a \in A | x \leq a < y\}$.
+Let $U$ be the set of items that can be placed inside a data structure. Let $\leq$ be a total order on $U$. For $x, y \in U$, $x \leq y$ and $A \subseteq U$, we write $\range{x}{y}{A}$ to denote the set $\{a \in A | x \leq a < y\}$.
 
 Let $h$ be a hash function from $U$ to a smaller set of hash digests $H$, e.g. the set of k-bit integers for some natural number $k$.
 Let $\oplus: H \times H \rightarrow H$ be a function such that $(H, \oplus, \mymathbb{0})$ form a group with neutral element $\mymathbb{0} \in H$, e.g. addition modulo $k$ with neutral element $0$.
@@ -237,9 +237,9 @@ f() &= \mymathbb{0}\\
 f(x_0, x_1, \ldots) &= h(x_0) \oplus f(x_1, \ldots)\\
 \end{align*}
 
-Observe that $f(\interval{x}{y}{A}) = f(\interval{min(A)}{y}{A}) \ominus f(\interval{min(A)}{x}{A})$. For efficient computation of fingerprints for arbitrary intervals it thus suffices to be able to efficiently compute the sum of hashes over arbitrary prefixes of $A$ sorted according to $\leq$.
+Observe that $f(\range{x}{y}{A}) = f(\range{min(A)}{y}{A}) \ominus f(\range{min(A)}{x}{A})$. For efficient computation of fingerprints for arbitrary ranges it thus suffices to be able to efficiently compute the sum of hashes over arbitrary prefixes of $A$ sorted according to $\leq$.
 
-To that end, store $A$ in a balanced search tree that holds the sum over the hashes of all descendents in every internal vertex, and the elements of $A$ in the leaves (this can be maintained as a self-balancing tree). $f(\interval{min(A)}{x}{A})$ can then be computed in $O(log(n))$ time by traversing from the root to $x$ and summing over the hashes stored in the left children of all vertices encountered in the traversal.
+To that end, store $A$ in a balanced search tree that holds the sum over the hashes of all descendents in every internal vertex, and the elements of $A$ in the leaves (this can be maintained as a self-balancing tree). $f(\range{min(A)}{x}{A})$ can then be computed in $O(log(n))$ time by traversing from the root to $x$ and summing over the hashes stored in the left children of all vertices encountered in the traversal.
 
 \section{Related Work}\label{related-work}
 
