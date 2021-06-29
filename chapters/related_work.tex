@@ -4,25 +4,29 @@ The range-based approach to set reconciliation has been employed as an implement
 
 \section{Fingerprinting Sets}
 
-As range based synchronization relies on fingerprinting sets, we give a small overview over work on that topic. Some of these references have already come up with in this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
-
-The earliest mention of hashing into a group and performing computations on hashes to compactly store information about sets that we could find is in~\cite{wegman1981new}. They provide probabilistic set equality testing, but without maintaining any tree structure, effectively anticipating (cryptographically insecure) homomorphic fingerprinting.
+As range based synchronization relies on fingerprinting sets, we give a small overview of work on that topic. Some of these references have already come up with in this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
 
 Merkle trees~\cite{merkle1989certified} introduce the idea of maintaining hashes in a tree to allow efficient updating without a group structure on the hashes. Since the exact shape of the tree determines the root label, unique representations of sets as trees are of interest. \cite{uniquerepresentation} proves the important negative result that in general unique representations require superlogarithmic time to maintain under insertions and deletions. \cite{sundar1994unique} gives logarithmic solutions for sparse or dense sets and points to further deterministic solutions.
 
 Unique representations with probabilistic time complexities that are logarithmic in the expected case have been studied in~\cite{pugh1989incremental}, suggesting hash-tries as a set representation for computing hashes. Pugh also developed skip lists~\cite{pugh1990skip}, a probabilistic set representation not based on trees. \cite{seidel1996randomized} offers treaps, another randomized tree structure. Further study of uniquely represented data structures has been done under the moniker of \textit{history-independent data structures}, including IO-efficient solutions for treaps~\cite{golovin2009b} and skip list~\cite{bender2016anti} in an \textit{external memory} computational model.
 
-TODO
+Beyond the comparison of root labels for set equality testing, Merkle trees and their technique of hashing the concatenation of hashes form the basis of many authenticated data structures, ranging from simple balanced trees or treaps~\cite{naor2000certificate} and skip lists~\cite{goodrich2000efficient} to more general DAG-based data structures~\cite{martel2004general}.
 
-\begin{itemize}
-  \item set reconciliation literature
-  \item hash graph synchronization
-  \item filesystem synchronization
-  \item history-based synchronization
-  \item authenticated data structures
-  \item hashing sets (pugh, tarjan...)
-% https://scholar.google.com/scholar?hl=de&as_sdt=0%2C5&q=A%20General%20Model%20for%20Authenticated%20Data%20Structures
-\end{itemize}
+A different line of authenticated data structures utilizes dynamic accumulators~\cite{camenisch2002dynamic}, small digests for sets that can be efficiently updated under insertion and deletion of items, and which allow computing small certificates that some item has been ingested. \cite{papamanthou2016authenticated} and \cite{papamanthou2011optimal} use accumulators to provide authenticated set data structures that are more efficient than their Merkle-tree-based counterparts. Accumulators are stronger than necessary for the range-based synchronization approach, so they are not discussed in our main text. An interesting opportunity for further research could be the design of synchronization protocols which leverage the strong properties offered by dynamic accumulators.
+
+Orthogonal to these lines of research are algebraic approaches. The earliest mention of hashing into a group and performing computations on hashes to compactly store information about sets that we could find is in~\cite{wegman1981new}. They provide probabilistic set equality testing, but without maintaining any tree structure, effectively anticipating (cryptographically insecure) homomorphic set fingerprinting.
+
+The first investigation of the cryptographic security of this approach was done in the seminal~\cite{bellare1997new}, albeit in the slightly less natural context of sequences rather than sets, with the additive hash being broken in~\cite{wagner2002generalized} and~\cite{lyubashevsky2005parity}. The multiset homomorphic formulation was given in~\cite{clarke2003incremental}, further constructions are given in~\cite{cathalo2009comparing},~\cite{maitin2017elliptic} and~\cite{lewi2019securing}.
+
+The generalized hash tree of~\cite{papamanthou2013streaming} extends the idea of combining hashes by a binary operation to operations that are not closed, instead the output is mapped back into the original domain by a separate function. These ``compressed'' outputs are then arranged in a tree, this technique allows using the algebraic approach for authenticated data structures.
+
+\section{Set Reconcilliation}
+
+\section{Other stuff TODO}
+
+- history-based
+- hash-dag synchronization
+- filesystem sync
 
 %The literature for set reconciliation is fixated on minimizing roundtrips, at the cost of high computation times. \cite{minsky2003set} gives theoretical limits and a very clever protocol approaching them, but which requires $O(n^3)$ computation time per round-trip. The authors acknowledge the practical infeasibility and offer \cite{minsky2002practical}, which is also the only paper that cares whether auxiliary data structures can be efficiently synchronized with the set to reconcile as it changes. They use a simpler approach highly related to error-correcting codes: Both peers send a digest, if the digests are similar enough, the union can be computed from holding both digests and one of the sets. If they are not similar enough, the set has been too large, so they recursively reconcile partitions of the set. Unfortunately, their auxiliary data structure is not self-balancing, so their complexity guarantees degrade as the set to reconcile is being modified.
 %
