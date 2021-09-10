@@ -40,7 +40,7 @@ $X_1 \defeq \{\examplea, \examplee, \examplef, \exampleg\}$
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 		%vertices
 		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \examplee, \examplef, \exampleg\}}};
@@ -65,7 +65,7 @@ $X_1 \defeq \{\examplea, \examplee, \examplef, \exampleg\}$
 		\draw (v10) edge[edge] (v20);
 		\draw (v12) edge[edge] (v21);
 	\end{pgfonlayer}
-	
+
 	\begin{pgfonlayer}{background}
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);
@@ -75,11 +75,14 @@ $X_1 \defeq \{\examplea, \examplee, \examplef, \exampleg\}$
 \end{tikzpicture}
 \end{scaletikzpicturetowidth}
 
-\caption{
+\caption[Detailed synchronization example]{
 An example run of the protocol. $\mathcal{X}_1$ initiates reconciliation for all items between \examplea~ and \examplei (ordered alphabetically) by sending its fingerprint for the whole range.
+
 Upon receiving this range fingerprint, $\mathcal{X}_0$ locally computes $\fp{\range{\examplea}{\examplei}{X_0}}$. Since the result does not match the received range, $\mathcal{X}_0$ splits $X_0$ into two parts of equal size and transmits range fingerprints for these subranges.
+
 In the third round, $\mathcal{X}_1$ locally computes fingerprints for the two received ranges, but neither matches. $\abs{\range{\examplea}{\examplee}{X_1}} \leq 1$, so $\mathcal{X}_1$ transmits the corresponding range items set, i.e. $\iis{\examplea}{\examplee}{\examplea}{0}$. $\abs{\range{\examplee}{\examplei}{X_1}} > 1$, so another recursion step is performed. After splitting the range, the lower range is large enough to send its fingerprint, the upper one however only contains one item and thus results in another range item set.
-In the fourth and final communication round, $\mathcal{X}_0$ receives two range item sets and answers with the items it holds within those ranges. When it receives the range fingerprint $\ifp{\examplee}{\exampleg}{X_1}$, it computes an equal fingerprint for $\ifp{\examplee}{\exampleg}{X_0}$, so no further action is required for this particular range. TODO prettify this caption
+
+In the fourth and final communication round, $\mathcal{X}_0$ receives two range item sets and answers with the items it holds within those ranges. When it receives the range fingerprint $\ifp{\examplee}{\exampleg}{X_1}$, it computes an equal fingerprint for $\ifp{\examplee}{\exampleg}{X_0}$, so no further action is required for this particular range.
 }
 
 \label{simple-set-reconciliation-example}
@@ -111,7 +114,7 @@ We now prove the correctness of the protocol. The protocol is correct if for all
 
 \case[Recursion Anchor] \label{case-ifp-anchor} If $\mathcal{X}_i$ adds the range item set $\iisnatural{x}{y}{X_i}{0}$, then \cref{case-iis} applies when the other node receives the response, with the roles reversed.
 
-\case[Recurse] Let $\intcount{i} \defeq \abs{\range{x}{y}{X_i}}$ and $\intcount{j} \defeq \abs{\range{x}{y}{X_j}}$. $\intcount{j} \geq 2$, since otherwise $\mathcal{X}_j$ would have sent an item set for the range. Similarly, $\intcount{i} \geq 2$, since we are not in \cref{case-ifp-anchor}. Thus, $\intcount{i} + \intcount{j} \geq 4$, and the protocol has already been proven correct for all cases where $\intcount{i} + \intcount{j} < 4$. 
+\case[Recurse] Let $\intcount{i} \defeq \abs{\range{x}{y}{X_i}}$ and $\intcount{j} \defeq \abs{\range{x}{y}{X_j}}$. $\intcount{j} \geq 2$, since otherwise $\mathcal{X}_j$ would have sent an item set for the range. Similarly, $\intcount{i} \geq 2$, since we are not in \cref{case-ifp-anchor}. Thus, $\intcount{i} + \intcount{j} \geq 4$, and the protocol has already been proven correct for all cases where $\intcount{i} + \intcount{j} < 4$.
 
 We can thus finish the proof by induction on $\intcount{i} + \intcount{j}$, using the induction hypothesis that for all $x', y' \in U$ such that $\abs{\range{x'}{y'}{X_i}} + \abs{\range{x'}{y'}{X_j}} < \intcount{i} + \intcount{j}$ the protocol correctly reconciles $\range{x'}{y'}{X_i}$ and $\range{x'}{y'}{X_j}$.
 
@@ -128,7 +131,7 @@ The protocol gives nodes the freedom to respond to a range fingerprint with a ra
 
 A node is similarly given freedom over the number of subranges into which to split a range when recursing. We will assume a node always splits into at most $b \in \mathbb{N}, b \geq 2$ subranges. As with $t$, higher numbers reduce the number of roundtrips at the cost of potentially sending items or fingerprints that did not need sending.
 
-Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{\min} \defeq \min(n_0, n_1)$, $n_{\max} \defeq \max(n_0, n_1)$, $n_{\cap} \def \abs{\range{x}{y}{X_0} \cap \range{x}{y}{X_1}}$, $n_{\cup} \def \abs{\range{x}{y}{X_0} \cup \range{x}{y}{X_1}}$ and $n_{\triangle} \defeq \abs{(\range{x}{y}{X_0} \cup \range{x}{y}{X_1}) \setminus (\range{x}{y}{X_0} \cap \range{x}{y}{X_1})}$. TODO remove those that are not needed
+Because we want to analyze not only the worst-case complexity but also the complexity depending on the similarity between the two sets held by the participating nodes, we define some rather fine-grained instance size parameters: $n_0$ and $n_1$ denote the number of items held by $\mathcal{X}_0$ and $\mathcal{X}_1$ respectively. We let $n \defeq n_0 + n_1$, $n_{\min} \defeq \min(n_0, n_1)$ and $n_{\triangle} \defeq \abs{(\range{x}{y}{X_0} \cup \range{x}{y}{X_1}) \setminus (\range{x}{y}{X_0} \cap \range{x}{y}{X_1})}$.
 
 \subsection{Preliminary Observations}
 
@@ -152,7 +155,7 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 		%vertices
 		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh\}}};
@@ -175,10 +178,10 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 		\draw (v01) edge[edge] (v11);
 
 		\draw (v10) edge[edge] (v20);
-		
+
 		\draw (v20) edge[edge] (v30);
 	\end{pgfonlayer}
-	
+
 	\begin{pgfonlayer}{background}
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);
@@ -214,7 +217,7 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 		%vertices
 		\node (vroot) at (0, 1) [fpi] {\examplefpi{\examplea}{\examplei}{\{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, \exampleg, \exampleh\}}};
@@ -255,7 +258,7 @@ $X_1 \defeq \{\examplea, \exampleb, \examplec, \exampled, \examplee, \examplef, 
 		\draw (v22) edge[edge] (v32);
 		\draw (v23) edge[edge] (v33);
 	\end{pgfonlayer}
-	
+
 	\begin{pgfonlayer}{background}
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](8, 1) -- (-8, 1);
 		\draw[-{Triangle[width=30pt,length=17pt,color=gray]}, line width=15pt, color=gray](-8, -0) -- (8, -0);

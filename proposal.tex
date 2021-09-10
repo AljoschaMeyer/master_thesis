@@ -20,35 +20,16 @@
 
 \usepackage{macros}
 
-\title{Efficient Synchronization of Recursively Partitionable Data
-Structures}
+\title{Range-Based Set Synchronization}
 \author{Aljoscha Meyer}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-Given two nodes in a distributed system, each of them holding a data
-structure, one or both of them might need to update their local replica
-based on the data available at the other node. An efficient solution
-should avoid redundantly sending data to a node which already holds it.
+Set reconciliation is the problem of computing the union between two sets stored on different machines. Set mirroring is the problem of updating one of these sets to be equal to the other. Optimal communication complexity requires transmitting a number of bits proportional to $n_{\triangle}$, the number of items occurring in exactly one of the two sets. While there are sophisticated set reconcilliation protocols achieving this optimum, they require computation time proportional to the size of the sets and computation space proportional to $n_{\triangle}$. Furthermore, they cannot be modified to solve the set mirroring problem.
 
-We give conceptually simple yet asymptotically efficient probabilistic
-solutions based on recursively exchanging fingerprints for data
-structures of exponentially decreasing size, obtained by recursively
-partitioning the data structures. We apply the technique to sets, maps
-and radix trees. For data structures containing n items, this leads to
-O(log(n)) round-trips. We give a scheme by which the fingerprints can be
-computed in O(log(n)) time, based on an auxiliary data structure which
-requires O(n) space and which can be updated to reflect changes to the
-underlying data structure in O(log(n)) time.
-
-To minimize round-trips, the technique requires up to O(n) space per
-synchronization session. It can be adapted to require only a bounded
-amount of memory, which is essential for robust, scalable
-implementations. While this increases the worst-case number of
-round-trips, it guarantees continuous progress, in particular even in
-adversarial environments.
+Range-based synchronization is a simpler approach based on comparing hashes of ranges over the set and recursing if the two nodes arrive at different hashes, solving both the set reconciliation and the set mirroring problem. The number of bits transmitted is worse than the optimum by a factor of the logarithm of the size of the sets, but in exchange the computation time is only proportional to $n_{\triangle}$ and the computation space is constant.
 \end{abstract}
 
 \section{Introduction}\label{introduction}

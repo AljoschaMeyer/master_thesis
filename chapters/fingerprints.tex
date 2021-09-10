@@ -3,12 +3,6 @@
 The protocols we will discuss work by recursively computing and comparing fingerprints of sets.
 This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}.
 
-%TODO: move the following definitions to where they are needed
-
-%\begin{definition}
-%Let $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_1)$ be monoids. The \defined{direct product of $(U_0, \groupaddsym_0, \neutraladd_0)$ and $(U_1, \groupaddsym_1, \neutraladd_)$} is the monoid $(U_0 \times U_1, \f, (\neutraladd_0, \neutraladd_1))$ with $\f((u_0, u_1), (v_0, v_1)) \defeq (u_0 \groupaddsym_0 v_0, u_1 \groupaddsym_1 v_1)$.
-%\end{definition}
-
 \section{Initial Considerations}
 \label{initial-considerations}
 
@@ -104,13 +98,12 @@ We define a \defined{labeling function} $\fun{\liftlabel{\f}{\mathcal{M}}}{S}{M}
   \[
    \liftlabel{\f}{\mathcal{M}}(v) \defeq \begin{cases}
 \f(v), &  \text{for leaf $v$} \\
-\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\f(v)} & \, \text{v internal vertex with left child $c_{<}$ and no right child}\\
-\groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{<})} & \, \text{v internal vertex with right child $c_{>}$ and no left child}\\
-\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}} & \, \text{v internal vertex with left child $c_{<}$ and right child $c_{>}$}
+\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\f(v)} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with left child $c_{<}$\\\and no right child}\\
+\groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{<})} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with right child $c_{>}$\\and no left child}\\
+\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with left child $c_{<}$\\and right child $c_{>}$}
 \end{cases}
   \]
 
-TODO fix overflow
 See \cref{fig:fp-tree} for an example.
 \end{definition}
 
@@ -120,7 +113,7 @@ See \cref{fig:fp-tree} for an example.
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 		%vertices
 		\node (vroot) at (0, 1) [aux] {\aux{\exampled}{
@@ -273,9 +266,9 @@ rangeFingerprint v x y = case findInitial v x y of
     Nothing               -> emptyFp
     Just (Leaf _ fp)      -> liftFp 'sfp
     Just (Inner l v' r _) -> combine
-                                (accGeq l x) -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid x \preceq u})$ 
+                                (accGeq l x) -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid x \preceq u})$
                                 (liftFp (hash v')) -- \f(v')
-                                (accLt r y)  -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid u \prec y})$ 
+                                (accLt r y)  -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid u \prec y})$
 \end{minted}
 
 $\lift{\f}{\mathcal{M}}(\range{x}{\max(\V(T_{c_{<}}))}{\V(T_{c_{<}})})$ can be computed by traversing from $c_{<}$ to $x$, summing over those vertices along the path that are greater or equal to $x$, as well as the right children of all vertices along the path. Correctness follows from a rather technical but straightforward induction we omit.
@@ -569,6 +562,7 @@ In the protocols for synchronizing data structures, fingerprints of sets are use
 Random distribution of input sets is however a very strong assumption. What if a malicious party can influence the sets to be fingerprinted, with the goal of causing fingerprint collisions and consequently triggering faulty behavior of the system? Cryptographically secure fingerprints are an answer to this problem, being chosen such that it is computationally infeasible for an adversary to find inputs that lead to faulty synchronization.
 
 \subsection{General Considerations}
+\label{crypto-general}
 
 A typical definition of cryptographically secure hash functions is the following~\cite{menezes2018handbook}:
 
@@ -614,7 +608,7 @@ In a system with a consensus mechanism among all participating nodes, the choice
 
 Multiplication, addition and xor as a way of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
 
-The main observation is that xor is the additive operation in $\mathds{F}_2$, the finite field on two elements $\set{0, 1}$. A fingerprint can be interpreted as a vector $\begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$. The fingerprint of a set $S = \set{s_1, s_2, \ldots, s_n}$ can thus be computed as the sum (within $\mathds{F}_2$, i.e. as the xor) of the vectors corresponding to $s_1, s_2, \ldots, s_n$. The fingerprint of some $S' \subseteq S$ can also be regarded as the sum over all vectors, but each vector being first multiplied with a coefficient of $1$ if $s_i \in S'$ and coefficient $0$ if $s_i \notin S'$. In other words, the fingerprint of $S'$ is a linear combination of the hashes of the items in $S$. 
+The main observation is that xor is the additive operation in $\mathds{F}_2$, the finite field on two elements $\set{0, 1}$. A fingerprint can be interpreted as a vector $\begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$. The fingerprint of a set $S = \set{s_1, s_2, \ldots, s_n}$ can thus be computed as the sum (within $\mathds{F}_2$, i.e. as the xor) of the vectors corresponding to $s_1, s_2, \ldots, s_n$. The fingerprint of some $S' \subseteq S$ can also be regarded as the sum over all vectors, but each vector being first multiplied with a coefficient of $1$ if $s_i \in S'$ and coefficient $0$ if $s_i \notin S'$. In other words, the fingerprint of $S'$ is a linear combination of the hashes of the items in $S$.
 
 This enables us to efficiently find subsets whose fingerprint are a particular vector. Let $S = \set{s_1, s_2, \ldots, s_n}$ be a set of items, and let $b = \begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$ be the target fingerprint. For $0 < i \leq n$ define $a_i = \begin{bmatrix}a_{i, 1} & a_{i, 2} & \ldots & a_{i, k}\end{bmatrix} \in \set{0, 1}^{1 \times k}$ to be $\f(s_i)$ interpreted as a vector over $\mathds{F}_2$. The coefficients for linear combinations of the $a_i$ equal to $b$ are the solutions to the following system of linear equations over $\mathds{F}_2$:
 
@@ -649,15 +643,15 @@ For our context in which fingerprints are frequently sent over the network, long
 
 \cite{bellare1997new} also proposes a fourth monoid based on lattices. \cite{lewi2019securing} give a specific instantiation providing 200 bits of security with fingerprints of size $16 \cdot 1024 = 16384$ bit.
 
-All of the preceeding monoid operations are commutative, which our approach to fingerprint computation does not require. A typical associative but not commutative operation is matrix multiplication. Study of a family of hash functions based on multiplication of invertible matrices was initiated in \cite{zemor1991hash}, whose security is related to solving hard graph problems on the Caley graph of the matrix multiplication group. \cite{petit2011rubik} gives a good overview about the general principle and the security aspects of Caley hash functions.
+All of the preceeding monoid operations are commutative, which our approach to fingerprint computation does not require. A typical associative but not commutative operation is matrix multiplication. Study of a family of hash functions based on multiplication of invertible matrices was initiated in \cite{zemor1991hash}, whose security is related to solving hard graph problems on the Cayley graph of the matrix multiplication group. \cite{petit2011rubik} gives a good overview about the general principle and the security aspects of Cayley hash functions.
 
-While \cite{tillich1994hashing}, an improvement over the originally proposed scheme, has been successfully attacked in \cite{grassl2011cryptanalysis}\cite{petit2010preimages}, there are several modifications~\cite{petit2009graph}\cite{bromberg2017navigating}\cite{sosnovski2016cayley} for which no attacks are currently known, and \cite{mullan2016text} showed random self-reducibility for Caley hash functions.
+While \cite{tillich1994hashing}, an improvement over the originally proposed scheme, has been successfully attacked in \cite{grassl2011cryptanalysis}\cite{petit2010preimages}, there are several modifications~\cite{petit2009graph}\cite{bromberg2017navigating}\cite{sosnovski2016cayley} for which no attacks are currently known, and \cite{mullan2016text} showed random self-reducibility for Cayley hash functions.
 
-Whereas the schemes based on commutative groups operate on two bitstrings at a time, the Caley hash functions operate on two individual bits at a time. Attacks thus assume that the manipulated bits can be freely chosen, using this to e.g. craft palindromic inputs. This may mean that such attacks are hard to apply to our setting where the input bits are produced in non-reorderable batches by another, cryptographically secure hash function. After finding a bit sequence that yields a Caley hash collision, an attacker still needs to find items for which the concatenation of their hashes is the desired it sequence.
+Whereas the schemes based on commutative groups operate on two bitstrings at a time, the Cayley hash functions operate on two individual bits at a time. Attacks thus assume that the manipulated bits can be freely chosen, using this to e.g. craft palindromic inputs. This may mean that such attacks are hard to apply to our setting where the input bits are produced in non-reorderable batches by another, cryptographically secure hash function. After finding a bit sequence that yields a Cayley hash collision, an attacker still needs to find items for which the concatenation of their hashes is the desired it sequence.
 
-Alternatively, one can forgo the additional hash function and apply the Caley hash function directly to the encodings of items. This simplifies the overall scheme and removes reliance on a second hash function. On the other hand, if one expects the additional hash function to be harder to attack than the Caley hash, then making the attacks against the Caley hash function less flexible might overall make attacks more difficult. Furthermore, Caley hash functions are usually slower than typical choices for the hash function from items to bitstrings, so using both can produce significant speedups if items have long encodings.
+Alternatively, one can forgo the additional hash function and apply the Cayley hash function directly to the encodings of items. This simplifies the overall scheme and removes reliance on a second hash function. On the other hand, if one expects the additional hash function to be harder to attack than the Cayley hash, then making the attacks against the Cayley hash function less flexible might overall make attacks more difficult. Furthermore, Cayley hash functions are usually slower than typical choices for the hash function from items to bitstrings, so using both can produce significant speedups if items have long encodings.
 
-Aside from Caley hashes, we are not aware of any non-commutative monoids used for hashing. We would further like to note that any hashes based on groups still have more structure than required for our designs, as we don't need existence of inverse elements. Strictly speaking our designs do not even require a neutral element: the fingerprint of the empty set never needs to be exchanged in a protocol run, so we could have just as well defined fingerprints for all nonempty sets without relying on the neutral element to do so. The presentation we chose is merely more elegant. And finally, we do not require pre-image resistance for our fingerprints. Suitable hash functions could thus be located in a more general design space than studied in any literature we know of.
+Aside from Cayley hashes, we are not aware of any non-commutative monoids used for hashing. We would further like to note that any hashes based on groups still have more structure than required for our designs, as we don't need existence of inverse elements. Strictly speaking our designs do not even require a neutral element: the fingerprint of the empty set never needs to be exchanged in a protocol run, so we could have just as well defined fingerprints for all nonempty sets without relying on the neutral element to do so. The presentation we chose is merely more elegant. And finally, we do not require pre-image resistance for our fingerprints. Suitable hash functions could thus be located in a more general design space than studied in any literature we know of.
 
 \section{Pseudorandom Data Structures}
 \label{randomization}
@@ -703,13 +697,11 @@ Treaps store items in every vertex, whereas Merkle trees only store items in the
   \[
    \tlabel{\h}(v) \defeq \begin{cases}
 \h(v), &  \text{for leaf $v$} \\
-\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \tlabel{\h}(v)) & \, \text{v internal vertex with left child $c_{<}$ and no right child}\\
-\tlabel{\h}(\tlabel{\h}(v) \concatenate \tlabel{\h}(c_{>})) & \, \text{v internal vertex with right child $c_{>}$ and no left child}\\
-\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \h(v) \concatenate \tlabel{\h}(c_{>})) & \, \text{v internal vertex with left child $c_{<}$ and right child $c_{>}$}
+\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \tlabel{\h}(v)) & \, \parbox[t]{.6\textwidth}{v internal vertex with left child $c_{<}$\\and no right child}\\
+\tlabel{\h}(\tlabel{\h}(v) \concatenate \tlabel{\h}(c_{>})) & \, \parbox[t]{.6\textwidth}{v internal vertex with right child $c_{>}$\\and no left child}\\
+\tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \h(v) \concatenate \tlabel{\h}(c_{>})) & \, \parbox[t]{.6\textwidth}{v internal vertex with left child $c_{<}$\\and right child $c_{>}$}
 \end{cases}
   \]
-
-TODO fix overflow
 
 We will call a treap labeled according to this scheme a \defined{Merkle treap}. Since Merkle treaps are unique, we can define the fingerprint of some set as the root label of the Merkle treap on that set if it is nonempty, or $\nil$ otherwise.
 
@@ -826,7 +818,7 @@ The skip list~\cite{pugh1990skip}\cite{pugh1998skip} is a probabilistic data str
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 \skiplisttower{0}{2}{$\bot$}
 \skiplisttower{1}{2}{$\examplea$}
@@ -882,7 +874,7 @@ Then $\sllabel{\h}(u_{0, i}) \defeq \h(u_{0, i})$ and $\sllabel{\h}(u_{l + 1, i}
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 \skiplisttower{0}{2}{$\bot$}
 \skiplisttower{1}{2}{$\examplea$}
@@ -954,7 +946,7 @@ Denote by $\skipdomain(u_{l, i})$ the set of items $u$ such that $u_{l, i} \prec
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 \skiplisttower{0}{2}{$\bot$}
 \skiplisttower{1}{2}{$\examplea$}
@@ -1011,7 +1003,7 @@ Let $\bar{u} = (u_0, u_1, \ldots, u_m)$ be the shortest path in the skip list fr
 	\pgfdeclarelayer{background}
 	\pgfdeclarelayer{foreground}
 	\pgfsetlayers{background,main,foreground}
-	
+
 	\begin{pgfonlayer}{main}
 \skiplisttower{0}{2}{$\bot$}
 \skiplisttower{1}{2}{$\examplea$}

@@ -3,7 +3,7 @@
 One of the problems that needs to be solved when designing a distributed system is how to efficiently synchronize data between nodes.
 Two nodes may each hold a particular set of data, and may then wish to exchange the ideally minimum amount of information until they both reach the same state.
 Typical ways in which this can happen are one node taking on the state of the other, or both nodes ending up with the union of information available between the two of them.
-We study the synchronization of sets and key-value mappings by exchanging fingerprints for recursively smaller sub-ranges of the item/key domain.
+We study the synchronization of sets and key-value mappings by exchanging fingerprints for recursively smaller sub-ranges of the item/key domain. This protocol is stateless, it requires no information about the local data structure to synchronize.
 
 \section{Motivating Examples}
 
@@ -97,10 +97,12 @@ deployment. Our designs require merely comparisons of (sums of) hashes,
 and the auxiliary data structure that enables efficient implementation
 is a simple balanced tree.
 
+The above criteria are tailored to stateless protocols. A different class of protocols could maintain some state in addition to the data structure in question, for example a history of how it was created, or a summary of the outcomes of past synchronization sessions. Such protocols might achieve better efficiency guarantees, but they are less flexible, or might require space proportional to the number of synchronization peers. This thesis focuses completely on stateless protocols.
+
 \section{Range-Based Synchronization}
 \label{recursively-comparing-fingerprints}
 
-The use-cases given above - distributed version control, unordered publish-subscribe, and updates distribution - all involve frequent synchronization with slightly changing data sets. For these situations, protocols in which each node has a computational overhead proportional to the size of its data structure are not appropriate. Range-based synchronization is an approach that incurs some overhead in form of an auxiliary data structure but in exchange achieves computational cost per synchronization session  of $\complexity{\min(n_{\triangle} \cdot \log(n), n)}$.
+The use-cases given above - distributed version control, unordered publish-subscribe, and updates distribution - all involve frequent synchronization with incrementally changing data sets. For these situations, protocols in which each node has a computational overhead proportional to the size of its data structure are not appropriate. Range-based synchronization is an approach that incurs some storage overhead in form of an auxiliary data structure but in exchange achieves computational cost per synchronization session  of $\complexity{\min(n_{\triangle} \cdot \log(n), n)}$.
 
 We briefly sketch the approach as a set reconciliation
 protocol (i.e.~a protocol for computing the union of two sets on
@@ -151,7 +153,7 @@ Range-based synchronization has been proposed in~\cite{chen1999prototype}, but i
 \item generalizations from set reconciliation to broader synchronization problems
 \end{itemize}
 
-The thesis is structured as follows: This introduction has given a broad overview on the studied problem and has sketched the basic range-based approach. Its viability hinges on the efficient computation of fingerprints, which is thoroughly treated in \cref{fingerprints}. We then give a efinition of the set
+The thesis is structured as follows: This introduction has given a broad overview on the studied problem and has sketched the basic range-based approach. Its viability hinges on the efficient computation of fingerprints, which is thoroughly treated in \cref{fingerprints}. We then give a definition of the set
 conciliation protocol in \cref{basic-set-reconciliation}, and prove its correctness and its
 complexity guarantees. \Cref{other-data-structures} generalizes the approach to related problems. \Cref{related-work}
 gives an overview of related work and justifies the chosen approach. We

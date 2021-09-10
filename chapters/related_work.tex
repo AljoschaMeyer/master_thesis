@@ -2,7 +2,10 @@
 
 The range-based approach to set reconciliation has been employed as an implementation detail for a specific use case in~\cite{chen1999prototype} section 3.6 and~\cite{shang2017survey} section II.A\footnote{We cite a survey because there is no standalone publication on CCNx 0.8 Sync. The survey refers to online documentation at \texttt{https://github.com/ProjectCCNx/ccnx/blob/master/doc/technical/SynchronizationProtocol.txt}}. Neither work studies it as a self-contained approach of interest to the set reconciliation problem, consequently the treatment is rather superficial, e.g. neither work considers collision resistance even though it is relevant to both settings. Considering the simplicity of the approach, there may well be further publications reusing or reinventing it. To the best of our knowledge, there is no prior work dedicated to the algorithm itself.
 
+We give an overview of the existing literature on set fingerprinting in \cref{related-fingerprinting}, and of the set reconciliation literature in \cref{related-reconciliation}.
+
 \section{Fingerprinting Sets}
+\label{related-fingerprinting}
 
 As range based synchronization relies on fingerprinting sets, we give a small overview of work on that topic. Some of these references have already come up with in this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
 
@@ -21,21 +24,56 @@ The first investigation of the cryptographic security of this approach was done 
 The generalized hash tree of~\cite{papamanthou2013streaming} extends the idea of combining hashes by a binary operation to operations that are not closed, instead the output is mapped back into the original domain by a separate function. These ``compressed'' outputs are then arranged in a tree, this technique allows using the algebraic approach for authenticated data structures.
 
 \section{Set Reconcilliation}
+\label{related-reconciliation}
 
-\section{Other stuff TODO}
+We now present several alternative approaches to the set reconciliation problem, almost all of which perform conciliation in a single communication round at the price of high computational cost. In the following presentations, we consider the setting of a node $\mathcal{X}_0$ holding a set $X_0 \subseteq U$ reconciling with a node $\mathcal{X}_1$ holding a set $X_1 \subseteq U$. We denote by $n_{\triangle}$ the size of the symmetric difference between $X_0$ and $X_1$.
 
-- history-based
-- hash-dag synchronization
-- filesystem sync
+\subsection{Characteristic Polynomial Interpolation}
 
-%The literature for set reconciliation is fixated on minimizing roundtrips, at the cost of high computation times. \cite{minsky2003set} gives theoretical limits and a very clever protocol approaching them, but which requires $O(n^3)$ computation time per round-trip. The authors acknowledge the practical infeasibility and offer \cite{minsky2002practical}, which is also the only paper that cares whether auxiliary data structures can be efficiently synchronized with the set to reconcile as it changes. They use a simpler approach highly related to error-correcting codes: Both peers send a digest, if the digests are similar enough, the union can be computed from holding both digests and one of the sets. If they are not similar enough, the set has been too large, so they recursively reconcile partitions of the set. Unfortunately, their auxiliary data structure is not self-balancing, so their complexity guarantees degrade as the set to reconcile is being modified.
-%
-%More recent work such as \cite{eppstein2011s} or \cite{ozisik2019graphene} focuses on invertible bloom filters, and fully embraces taking $O(n)$ computation time per synchronization session. The probabilistic guarantees also involve enough math with actual numbers to require some healthy suspicion.
-%
-%All of the previous work assumes that the items to be synchronized all have equal and relatively small size, which our approach does not require. None of the literature approaches utilize any structure of the data, whereas we can easily reconcile certain subsets (e.g. all data from within a timeframe if the total order being used sorts by timestamp).
-%
-%I am not aware of any literature at all that acknowledges the fact that the participating peers only have finite memory available, particularly a server which synchronizes with many peers concurrently has to enforce low memory consumption per session. Any implementation of a protocol not acknowledging this will simply crash at some point.
-%
-%Filesystem synchronization literature usually focuses on variants of rsync to optimize the single-file case, efficiently determining which files need updating is rarely discussed. Practical implementations usually sort all filenames, concatenate them, and then run their particular rsync the variant on that string. Using map synchronization should be more efficient.
-%
-%The basic idea of adding up hashes in a tree is not particularly original, e.g. the CCNx  0.8 Sync protocol~\cite{shang2017survey} does the same to solve a specific goal in a specific context.  This thesis highlights the concept as a standalone algorithmic solution to a general problem, examines the concept more closely (discussing choice of the group operation, security issues, etc.), adapts it to deal with bounded memory, and applies it to more data structures than just sets.
+The seminal work on set reconciliation is~\cite{minsky2003set}, introducing an approach based on characteristic polynomial interpolation (CPI). They consider the items to reconcile as bit-strings of length $b$. Given a set $S = \set{x_1, x_2, \ldots, x_n}$, the characteristic polynomial $\cp{S}$ is defined as $(Z - x_1)(Z - x_2)\ldots(Z - x_n)$. The elements in $S$ are exactly the roots of $\cp{S}$, so given the coefficients of $\cp{S}$, $S$ can be recovered by factoring the polynomial.
+
+Next observe that when dividing one characteristic polynomial by another, factors occurring in both polynomials cancel each other out, so it holds that:
+
+\[
+\frac{\cp{X_0}}{\cp{X_1}} = \frac{\cp{X_0 \setminus X_1}}{\cp{X_1 \setminus X_0}}
+\]
+
+The degrees of $\cp{X_0 \setminus X_1}$ and $\cp{X_1 \setminus X_0}$ are upper-bounded by $n_{\triangle}$. Assume that the nodes have somehow obtained an approximation $\bar{n}_{\triangle} \geq n_{\triangle}$. The nodes then agree on $\bar{n}_{\triangle}$ sample points from some sufficiently large field and node $\mathcal{X}_i$ locally evaluates $\cp{X_i}$. The results are exchanged, so each node can then recover the value of $\frac{\cp{X_0 \setminus X_1}}{\cp{X_1 \setminus X_0}}$ at each of the sample points.
+
+Knowing these values, a node can interpolate them to recover $\cp{X_0 \setminus X_1}$ and $\cp{X_1 \setminus X_0}$. Factoring these then yields the items $X_0 \setminus X_1$ and $X_1 \setminus X_0$, completing the reconciliation.
+
+The number of evaluation results that need to be exchanged is linear in $n_{\triangle}$, thus the total number of bits that need to be transmitted is proportional to $n_{\triangle}$, which is more efficient than the range-based approach. Evaluating $\cp{X_i}$ at $\bar{n}_{\triangle}$ sample points takes $\complexity{\abs{X_i} \cdot \bar{n}_{\triangle}}$ time, since every item in $X_i$ increases the number of terms in the characteristic polynomial. So while the communication complexity is asymptotically optimal, the computational complexity for a node is at least linear in the size of its set.
+
+Interpolating the evaluation points can be reduced to performing Gaussian elimination in $\complexity{\bar{n}_{\triangle}^3}$ time. The authors also give an $\complexity{\bar{n}_{\triangle}^3}$ time algorithm for finding the roots of the interpolated polynomials. The overall computational complexity is thus in $\complexity{\abs{X_i} \cdot \bar{n}_{\triangle} + \bar{n}_{\triangle}^3}$. The space complexity of the computations is not elaborated on, but since recovering of the polynomials requires the information about all $\bar{n}_{\triangle}$ evaluation points, it appears to be at least in $\complexity{\bar{n}_{\triangle}}$, i.e. an implementation using only a fixed amount of memory is not possible.
+
+The above description of the protocol assumes that an upper bound $\bar{n}_{\triangle} \geq n_{\triangle}$ is known, it then performs reconciliation within a single round trip. For the protocol to be asymptotically efficient in the communication complexity, $\bar{n}_{\triangle}$ must be within a constant factor of $n_{\triangle}$. If no such value can be known in advance, the number of sample points can be increased by a constant factor over multiple communication rounds, resulting in an appropriate $\bar{n}_{\triangle}$ after a logarithmic number of rounds, leading to an overall $\complexity{\log(\bar{n}_{\triangle})}$ communication rounds. In each round, the nodes verify probabilistically whether $\bar{n}_{\triangle}$ is large enough by sending some additional random sample points and verifying whether the result of the interpolation correctly evaluates these samples. A linear number of verification sample points decreases the probability of false positives exponentially.
+
+\subsection{Invertible Bloom Lookup Tables}
+
+A bloom filter~\cite{bloom1970space} is a probabilistic data structure for set membership queries. Given an item, the bloom filter can answer a membership query with a certain false positive rate. The size of a bloom filter is a fraction of the size of an array storing the items. The larger the filter is chosen relative to the number of items it stores, the smaller is the false positive rate.
+
+Invertible bloom lookup tables~\cite{goodrich2011invertible} (IBLTs) extend this behavior with the ability to list all items stored in the data structure, albeit again with an error probability which decreases as the fraction space per stored item goes up. \cite{eppstein2011s}~introduces set reconciliation based on IBLTs by formulating a way to compute the difference between two IBLTs, with the result corresponding to an IBLT encoding the corresponding set difference. This leads to the following set reconciliation algorithm:
+
+Assume the nodes have obtained an approximation $\bar{n}_{\triangle} \geq \abs{X_0 \setminus X_1}$. $\mathcal{X}_0$ creates an IBLT large enough that listing its contents succeeds with sufficient probability as long as it contains at most $\bar{n}_{\triangle}$ items. It then stores all items of $X_0$ in this table and transmits the table to $\mathcal{X}_1$. $\mathcal{X}_1$ creates an IBLT of the same size containing the items of $X_1$, and then subtracts the tables, yielding a table containing most $\bar{n}_{\triangle}$ items. This table is invertible, so $\mathcal{X}_1$ can recover $X_0 \setminus X_1$ from it. The same protocol can run in parallel with the roles reversed, resulting in full reconciliation.
+
+Creating the IBLT requires $\complexity{\abs{X_i}}$ time for node $\mathcal{X}_i$ and $\complexity{\bar{n}_{\triangle}}$ space, both of which dominate the cost for subtracting the IBLTs and for inverting them.
+
+Similar to the CPI approach, the nodes need an estimate of the size of the set difference before they can perform reconciliation. The authors present a single-message estimation protocol for the set difference that uses IBLTs as well. The size of the message is in $\complexity{\log(\abs{U})}$. Both creating or receiving and using the message requires $\complexity{X_i}$ time for node $\mathcal{X}_i$ and $\complexity{\log(\abs{U})}$ space.
+
+Overall, the IBLT approach achieves set reconciliation in a single round trip, transmitting only $\complexity{n_{\triangle} + \log(\abs{U})}$ bits. The computational cost is however linear in the size of the sets, and the space requirements for the computation are in $\complexity{n_{\triangle}}$, which can cause trouble the case of lopsided reconciliation sessions.
+
+\subsection{Other Bloom Filter Approaches}
+
+Several other approaches based on bloom filters have been published, all of which achieve a constant number of roundtrips and a small message size at the cost of at least linear computation time and computation space requirements.\cite{byers2002fast}~transmits the nodes of a patricia tree representation of the sets in a bloom filter, \cite{tian2011exact} uses a bloom filter-based approach to obtain an estimate of the size of the set difference in the first phase of a CPI reconciliation.
+
+\cite{guo2012set} employs counting bloom filters, \cite{luo2019set} makes use of cuckoo filters. \cite{ozisik2019graphene}~combines IPLTs with regular bloom filters to reduce the message size.
+
+\subsection{Partition Reconciliation}
+
+\cite{minsky2002practical} is the only publication we found which considers reconciliation in a logarithmic number of rounds in order to reduce computational load. It builds upon the CPI approach, but unlike~\cite{minsky2003set}, does not attempt to find some $\bar{n}_{\triangle} \geq n_{\triangle}$ to craft a message containing sufficient information to compute the set difference. Instead the protocol fixes some $\bar{m} \in \N$ and attempts reconciliation using $\bar{m}$ as an approximation of $n_{\triangle}$. If reconciliation fails, $X_0$ and $X_1$ are partitioned and reconciliation of the partitions is attempted with the same value $\bar{m}$ to determine the message size. Because the size of the partitions decreases, so must eventually the size of the symmetric difference between the pairs of partitions, until it is less than $\bar{m}$ and reconciliation succeeds.
+
+This approach eliminates the cubic scaling of the computation time in $\bar{n}_{\triangle}$. Similar to our auxiliary tree, the authors propose a tree structure of partitions where a parent node includes the intervals of its children. The reconciliation message for each of these intervals is precomputed and stored within the tree.
+
+Given such a partition tree, the reconciliation procedure has the same asymptotic complexity bounds as ours. It has better constant terms: whereas our approach recurses whenever the two ranges that are being compared are unequal, i.e., whenever the size of the symmetric difference is greater than zero, their approach only recurses whenever the size of the symmetric difference is greater than $\bar{m}$.
+
+The tree can be updated over insertions and deletions in time logarithmic in the height of the tree, but these updates are not balancing. In the worst case, maintaining this auxiliary data structure can thus take time linear in the size of the set per update. Furthermore, the tree is specific to a particular choice of evaluation and control points for the characteristic polynomial. If the tree is to be reused across different reconciliation sessions, these points have to be fixed in advance. This could allow an attacker to craft malicious sets for which a failed reconciliation is not detected. As a consequence, this approach can only be used with the producers of the sets are trusted.
