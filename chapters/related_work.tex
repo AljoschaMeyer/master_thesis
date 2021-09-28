@@ -1,13 +1,13 @@
 % !TEX root = ../main.tex
 
-The range-based approach to set reconciliation has been employed as an implementation detail for a specific use case in~\cite{chen1999prototype} section 3.6 and~\cite{shang2017survey} section II.A\footnote{We cite a survey because there is no standalone publication on CCNx 0.8 Sync. The survey refers to online documentation at \texttt{https://github.com/ProjectCCNx/ccnx/blob/master/doc/technical/SynchronizationProtocol.txt}}. Neither work studies it as a self-contained approach of interest to the set reconciliation problem, consequently the treatment is rather superficial, e.g. neither work considers collision resistance even though it is relevant to both settings. Considering the simplicity of the approach, there may well be further publications reusing or reinventing it. To the best of our knowledge, there is no prior work dedicated to the algorithm itself.
+The range-based approach to set reconciliation has been employed as an implementation detail for a specific use case in~\cite{chen1999prototype} section 3.6 and~\cite{shang2017survey} section II.A\footnote{We cite a survey because there is no standalone publication on CCNx 0.8 Sync. The survey refers to online documentation at \url{https://github.com/ProjectCCNx/ccnx/blob/master/doc/technical/SynchronizationProtocol.txt}}. Neither work studies it as a self-contained approach of interest to the set reconciliation problem, consequently the treatment is rather superficial, e.g,. neither work considers collision resistance, even though it is relevant to both settings. Considering the simplicity of the approach, there may well be further publications reusing or reinventing it. To the best of our knowledge, there is no prior work dedicated to the algorithm itself.
 
 We give an overview of the existing literature on set fingerprinting in \cref{related-fingerprinting}, and of the set reconciliation literature in \cref{related-reconciliation}.
 
 \section{Fingerprinting Sets}
 \label{related-fingerprinting}
 
-As range based synchronization relies on fingerprinting sets, we give a small overview of work on that topic. Some of these references have already come up with in this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
+As range-based synchronization relies on fingerprinting sets, we give a small overview of work on that topic. Some of these references have already come up withn this thesis because they are directly related to our approaches, the other references are given to round out the picture and because they might prove useful for developing further ideas.
 
 Merkle trees~\cite{merkle1989certified} introduce the idea of maintaining hashes in a tree to allow efficient updating without a group structure on the hashes. Since the exact shape of the tree determines the root label, unique representations of sets as trees are of interest. \cite{uniquerepresentation} proves the important negative result that in general unique representations require superlogarithmic time to maintain under insertions and deletions. \cite{sundar1994unique} gives logarithmic solutions for sparse or dense sets and points to further deterministic solutions.
 
@@ -26,7 +26,7 @@ The generalized hash tree of~\cite{papamanthou2013streaming} extends the idea of
 \section{Set Reconcilliation}
 \label{related-reconciliation}
 
-We now present several alternative approaches to the set reconciliation problem, almost all of which perform conciliation in a single communication round at the price of high computational cost. In the following presentations, we consider the setting of a node $\mathcal{X}_0$ holding a set $X_0 \subseteq U$ reconciling with a node $\mathcal{X}_1$ holding a set $X_1 \subseteq U$. We denote by $n_{\triangle}$ the size of the symmetric difference between $X_0$ and $X_1$.
+We now present several alternative approaches to the set reconciliation problem, almost all of which perform reconciliation in a single communication round at the price of high computational cost. In the following presentations, we consider the setting of a node $\mathcal{X}_0$ holding a set $X_0 \subseteq U$ reconciling with a node $\mathcal{X}_1$ holding a set $X_1 \subseteq U$. We denote by $n_{\triangle}$ the size of the symmetric difference between $X_0$ and $X_1$.
 
 \subsection{Characteristic Polynomial Interpolation}
 
@@ -38,7 +38,7 @@ Next observe that when dividing one characteristic polynomial by another, factor
 \frac{\cp{X_0}}{\cp{X_1}} = \frac{\cp{X_0 \setminus X_1}}{\cp{X_1 \setminus X_0}}
 \]
 
-The degrees of $\cp{X_0 \setminus X_1}$ and $\cp{X_1 \setminus X_0}$ are upper-bounded by $n_{\triangle}$. Assume that the nodes have somehow obtained an approximation $\bar{n}_{\triangle} \geq n_{\triangle}$. The nodes then agree on $\bar{n}_{\triangle}$ sample points from some sufficiently large field and node $\mathcal{X}_i$ locally evaluates $\cp{X_i}$. The results are exchanged, so each node can then recover the value of $\frac{\cp{X_0 \setminus X_1}}{\cp{X_1 \setminus X_0}}$ at each of the sample points.
+The degrees of $\cp{X_0 \setminus X_1}$ and $\cp{X_1 \setminus X_0}$ are upper-bounded by $n_{\triangle}$. Assume that the nodes have somehow obtained an approximation $\bar{n}_{\triangle} \geq n_{\triangle}$. The nodes then agree on $\bar{n}_{\triangle}$ sample points from some sufficiently large field, and node $\mathcal{X}_i$ locally evaluates $\cp{X_i}$. The results are exchanged, so each node can then recover the value of $\frac{\cp{X_0 \setminus X_1}}{\cp{X_1 \setminus X_0}}$ at each of the sample points.
 
 Knowing these values, a node can interpolate them to recover $\cp{X_0 \setminus X_1}$ and $\cp{X_1 \setminus X_0}$. Factoring these then yields the items $X_0 \setminus X_1$ and $X_1 \setminus X_0$, completing the reconciliation.
 
@@ -52,7 +52,7 @@ The above description of the protocol assumes that an upper bound $\bar{n}_{\tri
 
 A bloom filter~\cite{bloom1970space} is a probabilistic data structure for set membership queries. Given an item, the bloom filter can answer a membership query with a certain false positive rate. The size of a bloom filter is a fraction of the size of an array storing the items. The larger the filter is chosen relative to the number of items it stores, the smaller is the false positive rate.
 
-Invertible bloom lookup tables~\cite{goodrich2011invertible} (IBLTs) extend this behavior with the ability to list all items stored in the data structure, albeit again with an error probability which decreases as the fraction space per stored item goes up. \cite{eppstein2011s}~introduces set reconciliation based on IBLTs by formulating a way to compute the difference between two IBLTs, with the result corresponding to an IBLT encoding the corresponding set difference. This leads to the following set reconciliation algorithm:
+Invertible bloom lookup tables~\cite{goodrich2011invertible} (IBLTs) extend this behavior with the ability to list all items stored in the data structure, albeit again with an error probability which decreases as the fraction of space per contained item goes up. \cite{eppstein2011s}~introduces set reconciliation based on IBLTs by formulating a way to compute the difference between two IBLTs, with the result corresponding to an IBLT encoding the corresponding set difference. This leads to the following set reconciliation algorithm:
 
 Assume the nodes have obtained an approximation $\bar{n}_{\triangle} \geq \abs{X_0 \setminus X_1}$. $\mathcal{X}_0$ creates an IBLT large enough that listing its contents succeeds with sufficient probability as long as it contains at most $\bar{n}_{\triangle}$ items. It then stores all items of $X_0$ in this table and transmits the table to $\mathcal{X}_1$. $\mathcal{X}_1$ creates an IBLT of the same size containing the items of $X_1$, and then subtracts the tables, yielding a table containing most $\bar{n}_{\triangle}$ items. This table is invertible, so $\mathcal{X}_1$ can recover $X_0 \setminus X_1$ from it. The same protocol can run in parallel with the roles reversed, resulting in full reconciliation.
 

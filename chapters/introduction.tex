@@ -20,20 +20,20 @@ efficient synchronization by enforcing a linear happened-before
 relation between messages published to the same topic, i.e.~each message
 is assigned a unique sequence number that is one greater than the
 sequence number of the previous message in the topic. When two nodes share interest
-in a topic, they exchange the greatest sequence number they have for
+in a topic, they exchange the greatest sequence number they each have for
 this topic, whichever node sent the greater one then knows which
 messages the other is missing.
 
 The price to pay for this efficient protocol is that concurrent publishing of new
-messages to the same topic is forbidden, since it would lead to
-different messages with the same sequence number, breaking correctness
+messages to the same topic is forbidden, since that would lead to
+multiple messages with the same sequence number, breaking correctness
 of the synchronization procedure. An unordered pubsub mechanism based on
 set reconciliation would be able to support concurrent publishing, the
 other design aspects such as the overlay network could be left
 unchanged.
 
 An example from a less decentralized setting are incremental software
-updates. A server might host a new version of an operating system, users
+updates. A server might host a new version of an operating system, and users
 running an old version want to efficiently download the changes. An
 almost identical problem is that of efficiently creating a backup of a file
 system to a server already holding an older backup. Both of these
@@ -47,7 +47,7 @@ protocol, e.g.~rsync~\cite{tridgell1996rsync}.
 
 There are a variety of criteria by which to evaluate a synchronization
 protocol. We exemplify them by the trivial synchronization protocol,
-which consists of both node immediately sending all their data to the
+which consists of both nodes immediately sending all their data to the
 other node.
 
 Let $n_0$ be the number of items held by node $\mathcal{X}_0$, and $n_1$ the number of items
@@ -55,7 +55,7 @@ held by node $\mathcal{X}_1$. Let $n_{\triangle}$ be the number of items held by
 
 The most obvious efficiency criteria are the \defined{total bandwidth}
 ($\complexity{n}$ items are transmitted for the trivial protocol) and the number of
-\defined{communication rounds} ($\complexity{1}$ for the trivial protocol). Suppose one of the nodes holds no items, then the other node must transmit all of its items, so the total bandwidth is always in $\complexity{n}$. A more useful point of view is that of stating the communication complexity in terms of the minimum amount of items that has to be transmitted, i.e. $n_{\triangle}$. This is where the unsuitability of the trivial protocol becomes apparent, as it transmits $\complexity{n}$ items even of if $n_{\triangle}$ is small.
+\defined{communication rounds} ($\complexity{1}$ for the trivial protocol). Suppose one of the nodes holds no items, then the other node must transmit all of its items, so the total bandwidth is always in $\complexity{n}$. A more useful point of view is that of stating the communication complexity in terms of the minimum number of items which have to be transmitted, i.e. $n_{\triangle}$. This is where the unsuitability of the trivial protocol becomes apparent, as it transmits $\complexity{n}$ items even if $n_{\triangle}$ is small.
 
 Efficiently using the network is not everything, the computational
 \defined{time complexity per round-trip} must be feasible so that
@@ -68,7 +68,7 @@ particular, if an adversarial node can make a node run out of memory,
 the protocol can only be run in trusted environments. Even then, when
 non-malicious nodes of vastly differing computational capabilities
 interact (e.g.~a microcontroller connecting to a server farm),
-``accidental denial of service attacks'' can easily occur. Since the
+``accidental denial-of-service attacks'' can easily occur. Since the
 trivial protocol does not perform any actual computation, its space
 complexity per round-trip is in $\complexity{1}$.
 
@@ -97,23 +97,22 @@ deployment. Our designs require merely comparisons of (sums of) hashes,
 and the auxiliary data structure that enables efficient implementation
 is a simple balanced tree.
 
-The above criteria are tailored to stateless protocols. A different class of protocols could maintain some state in addition to the data structure in question, for example a history of how it was created, or a summary of the outcomes of past synchronization sessions. Such protocols might achieve better efficiency guarantees, but they are less flexible, or might require space proportional to the number of synchronization peers. This thesis focuses completely on stateless protocols.
+The above criteria are tailored to stateless protocols. A different class of protocols could maintain some state in addition to the data structure in question, for example a history of how it was created, or a summary of the outcomes of past synchronization sessions. Such protocols might achieve better efficiency guarantees, but they are less flexible, or might require space proportional to the number of synchronization peers. This work focuses completely on stateless protocols.
 
 \section{Range-Based Synchronization}
 \label{recursively-comparing-fingerprints}
 
-The use-cases given above - distributed version control, unordered publish-subscribe, and updates distribution - all involve frequent synchronization with incrementally changing data sets. For these situations, protocols in which each node has a computational overhead proportional to the size of its data structure are not appropriate. Range-based synchronization is an approach that incurs some storage overhead in form of an auxiliary data structure but in exchange achieves computational cost per synchronization session  of $\complexity{\min(n_{\triangle} \cdot \log(n), n)}$.
+The use-cases given above - distributed version control, unordered publish-subscribe, and update distribution - all involve frequent synchronization with incrementally changing data sets. For these situations, protocols in which each node has a computational overhead proportional to the size of its data structure are not appropriate. Range-based synchronization is an approach that incurs some storage overhead in form of an auxiliary data structure, but in exchange achieves computational cost per synchronization session  of $\complexity{\min(n_{\triangle} \cdot \log(n), n)}$.
 
-We briefly sketch the approach as a set reconciliation
-protocol (i.e.~a protocol for computing the union of two sets on
+We briefly sketch the approach in the form of a set reconciliation
+protocol (i.e., a protocol for computing the union of two sets on
 different machines) that exemplifies the core ideas. The protocol
-leverages the fact that sets can be partitioned into a number of smaller
+leverages the fact that large sets can be partitioned into a number of smaller
 subsets. The protocol assumes that the sets contain elements from
-a universe on which there is a total order based on which ranges can be
-defined, and that nodes can efficiently compute fingerprints for any subset of the
+a universe on which there is a total order based that can be used to define ranges, and that nodes can efficiently compute fingerprints for any subrange of the
 universe.
 
-Suppose for example two nodes $\mathcal{A}$, $\mathcal{B}$ each hold a set of natural numbers.
+Suppose, for example, two nodes $\mathcal{A}$, $\mathcal{B}$ each hold a set of natural numbers.
 They can reconcile all numbers within a range as follows: $\mathcal{A}$ computes
 a fingerprint over all the numbers it holds within the range and then sends this
 fingerprint to $\mathcal{B}$, together with the range boundaries. $\mathcal{B}$ then computes
@@ -130,7 +129,7 @@ are three possible cases:
 \item
   Otherwise, $\mathcal{B}$ splits the range into two sub-ranges, such that $\mathcal{B}$
   has a roughly equal number of numbers within each range. $\mathcal{B}$ then
-  initiates reconciliation for both of these ranges, the roles $\mathcal{A}$ and
+  initiates reconciliation for both of these ranges, the roles of $\mathcal{A}$ and
   $\mathcal{B}$ reverse.
 \end{itemize}
 

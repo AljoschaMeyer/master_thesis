@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
 
 The protocols we will discuss work by recursively computing and comparing fingerprints of sets.
-This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions. We examine randomized solutions that with high probability compute fingerprints in logarithmic time in \cref{randomization}.
+This chapter defines and motivates a specific fingerprinting scheme that admits efficient computation with small overhead for the storage and maintenance of auxiliary data structures. \Cref{initial-considerations} outlines the solution space and theoretic bounds. \Cref{group-fingerprints} characterizes a family of functions that admit efficient incremental computation, and \Cref{collisions} proposes members of this family that can be used for fingerprinting, and \cref{crypto} examine security concerns in the face of malicious parties trying to find fingerprint collisions. We examine randomized solutions which compute with high probability fingerprints in logarithmic time in \cref{randomization}.
 
 \section{Initial Considerations}
 \label{initial-considerations}
@@ -12,11 +12,11 @@ Our protocols work by recursively testing fingerprints for equality. For our pur
 A \defined{hash function} is a function $\fun{\h}{U}{D}$ with a finite codomain such that for randomly chosen $u \in U$ and $d \in D$ the probability that $\h(u) = d$ is roughly\footnote{To keep the focus on data structure synchronization rather than being sidetracked by cryptography, we will for the most part keep arguments about probabilities qualitative rather than quantitative.} $\frac{1}{\abs{D}}$. $\h(u)$ is called the \defined{hash of $u$}, \defined{fingerprint of $u$} or \defined{digest of $u$}.
 \end{definition}
 
-Given a universe $U$ of items, a function $\enc : U \rightarrow \{0, 1\}^{*}$ for encoding items as binary strings, a linear order $\preceq$ on $U$, a hash function $\h: \{0, 1\}^{*} \rightarrow \{0, 1\}^{k}$ mapping binary strings to binary strings of length $k$ and some finite $S \subseteq U$, a natural starting point for defining a fingerprint of the set $S$ is to sort the items according to $\preceq$, concatenate the encodings, and hash the resulting string.
+Given a universe $U$ of items, a function $\enc : U \rightarrow \{0, 1\}^{*}$ for encoding items as binary strings, a linear order $\preceq$ on $U$, a hash function $\h: \{0, 1\}^{*} \rightarrow \{0, 1\}^{k}$ mapping binary strings to binary strings of length $k$, and some finite $S \subseteq U$, a natural starting point for defining a fingerprint of the set $S$ is to sort the items according to $\preceq$, concatenate the encodings, and hash the resulting string.
 
-While this is straightforward to specify and implement, it does not suffice for our purposes. To allow for efficient set reconciliation, we need to be able to efficiently compute the new fingerprint after a small modification of the set such as insertion or deletion of a single item. Furthermore, we want to be able to efficiently compute the fingerprints of all subsets defined by a range of the original set.
+While this is straightforward to specify and implement, it does not suffice for our purposes. To allow for efficient set reconciliation, we need to be able to efficiently compute the new fingerprint after a small modification to the set such as insertion or deletion of a single item. Furthermore, we want to be able to efficiently compute the fingerprints of all subsets defined by a range of the original set.
 
-The fingerprint based on concatenating encodings does not allow for efficient incremental reevaluation. When an item is added to $S$ that is less than any item previously in $S$, the hash function needs to be run over the whole string of length $\complexity{\abs{S} + 1}$ again. Furthermore, for any subrange of the set, a full fingerprint computation needs to be performed as well. Precomputing the fingerprints of all subranges requires a prohibitive amount of space. Every subrange corresponds to a substring of the string consisting of all items in $S$ in ascending order, so there are $\frac{\abs{S} \cdot (\abs{S} + 1)}{2} + 1 \in \complexity{n^2}$ many in total.
+The fingerprint based on concatenating encodings does not allow for efficient incremental reevaluation. When an item is added to $S$ which is less than any item previously in $S$, the hash function needs to be run over the whole string of length $\complexity{\abs{S} + 1}$ again. Furthermore, for any subrange of the set, a full fingerprint computation needs to be performed as well. Precomputing the fingerprints of all subranges requires a prohibitive amount of space. Every subrange corresponds to a substring of the string consisting of all items in $S$ in ascending order, so there are $\frac{\abs{S} \cdot (\abs{S} + 1)}{2} + 1 \in \complexity{n^2}$ many subranges in total.
 
 The go-to approach for efficiently handling small changes to a set of totally ordered items are (balanced) search trees, we briefly state some definitions.
 
@@ -48,15 +48,15 @@ We call $T$ \defined{$\epsilon$-balanced} if $\textit{height}(T) \leq \ceil*{\ep
 Since the precise choice of $\epsilon$ will not matter for our complexity analyses, we will usually simply talk about \defined{balanced} trees.
 \end{definition}
 
-In the context of fingerprinting, balanced trees often take the form of Merkle trees~\cite{merkle1989certified}, binary trees storing items in their leaves, in which each leaf vertex is labeled with the hash of the associated item, and inner vertices are labeled with the hash of the concatenation of the child labels. The root label serves as a fingerprint for the set of items stored in the leaves.
+In the context of fingerprinting, balanced trees often take the form of Merkle trees~\cite{merkle1989certified} --- binary trees storing items in their leaves, in which each leaf vertex is labeled with the hash of the associated item, and inner vertices are labeled with the hash of the concatenation of the child labels. The root label serves as a fingerprint for the set of items stored in the leaves.
 
-When inserting or removing an item, the number of labels that need updating is proportional to the length of of the path from the root to the item, so in a balanced tree of $n$ items $\complexity{\mathit{log}(n)}$. The problem with this approach however is that fingerprints are no longer unique: there are different balanced search trees storing the same items set, and different tree arrangements result in different root labels.
+When inserting or removing an item, the number of labels that need updating is proportional to the length of of the path from the root to the item, so in a balanced tree of $n$ items $\complexity{\mathit{log}(n)}$. The problem with this approach however is that fingerprints are not unambiguous: there are different balanced search trees storing the same items set, and different tree arrangements result in different root labels.
 
 Unfortunately it does not suffice to specify a particular balancing scheme, since different insertion orders of the same overall set of items can result in different trees, even when using the same balancing scheme. While this is sufficient for a setting in which only a single machine updates the set and all other machines apply updates in the same order, as assumed e.g. in~\cite{naor2000certificate}, we aim for a less restrictive setting in which the evolution of the local set does not influence synchronization.
 
 An alternative would be to define exactly one valid tree shape for any set of items, but this precludes logarithmic time complexity of updates, as \cite{uniquerepresentation} shows that search, insertion and deletion in such trees take at least $\complexity{\sqrt{n}}$ time in the worst case.
 
-We will inspect two options for cheating this lower bound and to achieve logarithmic complexity: letting the fingerprint function abstract over the tree shape, downgrading it to an implementation detail, which we examine in \cref{group-fingerprints} to \cref{crypto}, or utilizing randomization to define a unique tree layout which allows logarithmic operations with high probability, which we examine in \cref{randomization}.
+We will inspect two options for circumventing this lower bound and to achieve logarithmic complexity: letting the fingerprint function abstract over the tree shape, downgrading it to an implementation detail, which we examine in \cref{group-fingerprints} to \cref{crypto}, or utilizing randomization to define a unique tree layout which allows logarithmic operations with high probability, which we examine in \cref{randomization}.
 
 \section{Incremental Computations}
 \label{group-fingerprints}
@@ -69,7 +69,7 @@ Let $M$ be a set, $\groupaddsym: M \times M \rightarrow U$, and $\neutraladd \in
 We call $(U, \groupaddsym, \neutraladd)$ a \defined{monoid} if it satisfies two properties:
 
   \begin{description}
-    \item[associativity:] for all $x, y, z \in M$: $\groupadd{(\groupadd{x}{y})}{z} = \groupadd{x}{\groupadd{y}{z}}$
+    \item[associativity:] for all $x, y, z \in M$: $\groupadd{(\groupadd{x}{y})}{z} = \groupadd{x}{(\groupadd{y}{z})}$
     \item[neutral element:] for all $x \in M$: $\groupadd{\neutraladd}{x} = x = \groupadd{x}{\neutraladd}$.
   \end{description}
 \end{definition}
@@ -98,7 +98,7 @@ We define a \defined{labeling function} $\fun{\liftlabel{\f}{\mathcal{M}}}{S}{M}
   \[
    \liftlabel{\f}{\mathcal{M}}(v) \defeq \begin{cases}
 \f(v), &  \text{for leaf $v$} \\
-\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\f(v)} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with left child $c_{<}$\\\and no right child}\\
+\groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\f(v)} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with left child $c_{<}$\\and no right child}\\
 \groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{<})} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with right child $c_{>}$\\and no left child}\\
 \groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(v)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}} & \, \parbox[t]{.6\textwidth}{$v$ internal vertex with left child $c_{<}$\\and right child $c_{>}$}
 \end{cases}
@@ -166,7 +166,7 @@ By induction on the number of vertices of $T$.
 
 \begin{align*}
  \liftlabel{\f}{\mathcal{M}}(r) &\overset{\text{def}}= \groupadd{\liftlabel{\f}{\mathcal{M}}(c_{<})}{\groupadd{\f(r)}{\liftlabel{\f}{\mathcal{M}}(c_{>})}}\\
-&\overset{\text{IH}}= \groupadd{\lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))}{\groupadd{\f(p)}{\lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))}}\\
+&\overset{\text{IH}}= \groupadd{\lift{\f}{\mathcal{M}}(\V(T_{c_{<}}))}{\groupadd{\f(r)}{\lift{\f}{\mathcal{M}}(\V(T_{c_{>}}))}}\\
 & \overset{\text{def}}= \lift{\f}{\mathcal{M}}(\V(T))\\
 &= \lift{\f}{\mathcal{M}}(S)\\
 \end{align*}
@@ -179,7 +179,7 @@ This correspondence can be used to incrementally compute $\lift{\f}{\mathcal{M}}
 
 Note that the exact shape of the tree determines the grouping of how to apply $\groupaddsym$, but by associativity all groupings yield the same result. All trees storing the same set have the same root label.
 
-If $U$ is small enough that space usage of $\complexity{\abs{U}}$ is acceptable, an implicit tree representation such as a binary indexed tree (Fenwick tree)~\cite{fenwick1994new} can be used. Array positions that correspond to some $u \in U \setminus S$ are simply filled with a dummy value whose hash is defined to be $\neutraladd$.
+If $U$ is small enough that space usage of $\complexity{\abs{U}}$ is acceptable, an implicit tree representation such as a binary indexed tree (Fenwick tree)~\cite{fenwick1994new} can be used. In that case, array positions that correspond to some $u \in U \setminus S$ are simply filled with a dummy value whose hash is defined to be $\neutraladd$.
 
 \subsection{Subsets}
 \label{subsets-associative}
@@ -199,7 +199,7 @@ In the remainder of this section, we assume that for all ranges $\range{x}{y}{S}
 
 Given a balanced search tree $T$ with root $r$ for a set $S$ that is labeled by $\liftlabel{\f}{\mathcal{M}}$, we can compute $\lift{\f}{\mathcal{M}}(\range{x}{y}{S})$ in logarithmic time. Intuitively, one traces paths in $T$ to both $x$ and $y$, and then the result is the sum over all vertices ``in the area between'' these paths. For every vertex on the traced paths, the label of the ``inner'' child vertex summarizes multiple vertices within the area. Summing over all these children yields the value corresponding to the whole inner area. Since the length of the delimiting paths is logarithmic, overall only a logarithmic number of labels needs to be added up.
 
-We now give a precise definition of this algorithm, defining it via Haskell~98~\cite{jones2003haskell} code, not necessarily because it is executable, but mostly to have a typed mathematic notation. For clarity of presentation only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child. These can be handled with almost the same algorithm by acting as if these nodes had a second child which contributes \texttt{emptyFingerprint} to any application of \texttt{combine}.
+We now give a precise definition of this algorithm, defining it via Haskell~98~\cite{jones2003haskell} code, not necessarily because it is executable, but mostly to have a typed mathematic notation. For clarity of presentation, only complete binary trees are considered. Arbitrary binary trees can also have inner nodes with exactly one child. These can be handled with almost the same algorithm by acting as if these nodes had a second child which contributes \texttt{emptyFingerprint} to any application of \texttt{combine}.
 
 We start by specifying the types involved in the computation, being slightly more general than currently necessary so that the algorithm can later be reused for certain non-monoidal fingerprinting schemes:
 
@@ -246,7 +246,7 @@ findInitial (Inner l v r _) x y
     | otherwise       = Just v
 \end{minted}
 
-If there is no such $v$, then $\range{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\range{x}{y}{S}) = \neutraladd$. If however there is such a $v$ then all vertices of $T$ that are not vertices in $T_v$ are either greater than or equal to $y$ if $v \prec x$, or strictly less than $x$ if $x \prec v$, in either case they do not influence $\lift{\f}{\mathcal{M}}(\range{x}{y}{S})$.
+If there is no such $v$, then $\range{x}{y}{S} = \emptyset$ and thus $\lift{\f}{\mathcal{M}}(\range{x}{y}{S}) = \neutraladd$. If however there is such a $v$, then all vertices of $T$ which are not vertices in $T_v$ are either greater than or equal to $y$ if $v \prec x$, or strictly less than $x$ if $x \prec v$; in either case they do not influence $\lift{\f}{\mathcal{M}}(\range{x}{y}{S})$.
 
 If $v$ is a leaf, $\range{x}{y}{S} = \set{v}$ and thus $\lift{\f}{\mathcal{M}}(\range{x}{y}{S}) = \f(v)$. Otherwise, let $c_{<}$ be the left child of $v$ and let $c_{>}$ be the right child. Since all vertices in $T_{c_{>}}$ are greater than $v$, they are in particular greater than $x$. Analogously all vertices in $T_{c_{<}}$ are less than $y$.
 
@@ -267,7 +267,7 @@ rangeFingerprint v x y = case findInitial v x y of
     Just (Leaf _ fp)      -> liftFp 'sfp
     Just (Inner l v' r _) -> combine
                                 (accGeq l x) -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid x \preceq u})$
-                                (liftFp (hash v')) -- \f(v')
+                                (liftFp (hash v')) -- $\f(v')$
                                 (accLt r y)  -- $\lift{\f}{\mathcal{M}}({u \in \V(T_l) \mid u \prec y})$
 \end{minted}
 
@@ -308,7 +308,7 @@ This $y$ is necessarily unique and denoted by $\inverseadd{x}$.
 For $x, y \in M$ we write $\groupsubtract{x}{y}$ as a shorthand for $\groupadd{x}{\inverseadd{y}}$.
 \end{definition}
 
-Observe that $\range{x}{y}{S} = \range{\min(S)}{y}{S} \setminus \range{\min(S)}{x}{S}$, and thus also $\lift{\f}{\mathcal{M}}(\range{x}{y}{S}) = \groupadd{\inverseadd{\lift{\f}{\mathcal{M}}(\range{\min(S)}{x}{S})}}{\lift{\f}{\mathcal{M}}(\range{\min(S)}{y}{S})}$. We can thus simplify \texttt{rangeFingerprint}, getting rid of both \texttt{findInitial} and \texttt{accGeq}:
+Observe that $\range{x}{y}{S} = \range{\min(S)}{y}{S} \setminus \range{\min(S)}{x}{S}$, and thus also $\lift{\f}{\mathcal{M}}(\range{x}{y}{S}) = \groupadd{\inverseadd{\lift{\f}{\mathcal{M}}(\range{\min(S)}{x}{S})}}{\lift{\f}{\mathcal{M}}(\range{\min(S)}{y}{S})}$. We can thus simplify \texttt{rangeFingerprint}, requiring neither \texttt{findInitial} nor \texttt{accGeq}:
 
 \begin{minted}{haskell}
 rangeFingerprintGroup :: Node -> U -> U -> Fingerprint
@@ -331,7 +331,9 @@ accGeq' acc (Leaf v fp) x
     | otherwise = combine emptyFp (liftFp fp) acc
 accGeq' acc (Inner l v r _) x
     | v < x     = accGeq' acc r x
-    | otherwise = accGeq' (combine (liftFp (hash v)) (label r) acc) l x
+    | otherwise = accGeq' (
+                      combine (liftFp (hash v)) (label r) acc
+                  ) l x
 
 accLt :: Node -> U -> Fingerprint
 accLt v y = accLt' emptyFp v y
@@ -342,23 +344,25 @@ accLt' acc (Leaf v fp) y
     | otherwise = combine acc (liftFp fp) emptyFp
 accLt' acc (Inner l v r _) y
     | v >= y    = accLt' acc l y
-    | otherwise = accLt' (combine acc (label l) + (liftFp (hash v))) r y
+    | otherwise = accLt' (
+                      combine acc (label l) + (liftFp (hash v))
+                  ) r y
 \end{minted}
 
 The space complexity of computing the fingerprint for a range is thus $\complexity{1}$. Note however that the tail-recursive forms require associativity to compute the same fingerprints as the original versions.
 
-As a closing remark on these computations, we want to point out that associativity not only allows us to abstract over differently shaped binary search trees, but also results in trees of higher degree leading to the same fingerprints. While binary trees simplify the presentation and are theoretically optimal, on actual hardware traversing pointers is expensive and loading sequential memory is cheap, which becomes even more pronounced when the tree resides on secondary storage.
+As a closing remark on these computations, we want to point out that associativity not only allows us to abstract over differently shaped binary search trees, but also results in trees of higher degree leading to the same fingerprints. Binary trees simplify the presentation and are theoretically optimal, but on actual hardware traversing pointers is expensive whereas loading sequential memory is cheap, which becomes even more pronounced when the tree resides on secondary storage.
 
 Optimized tree implementations thus have higher branching and store multiple items per vertex, a typical example being B-trees~\cite{bayer2002organization}. Our fingerprinting scheme admits such optimized implementations, in particular different nodes that want to synchronize data can choose their implementation techniques fully independently and yet maintain compatibility.
 
 \subsection{Bulk Fingerprint Computation}
 \label{bulk}
 
-The synchronization protocols partition item sets into disjoint ranges. When computing the fingerprint of $k$ such ranges using the previous algorithms, the overall time complexity is $\complexity{k \cdot \log(\abs{S})}$. This is worse than the overall $\complexity{\abs{S}}$ vertices and edges in the tree, because there is some amount of redundancy in these independent computations. For example, every single computation touches the root node, roughly half of them touch each of the root's children, etc.
+The synchronization protocols partitions item sets into disjoint ranges. When computing the fingerprints of $k$ such ranges using the previous algorithms, the overall time complexity is in $\complexity{k \cdot \log(\abs{S})}$. The reason why these algorithms lead to a worse complexityworse than the overall $\complexity{\abs{S}}$ vertices and edges in the tree, is that there is some amount of redundancy in these independent computations. For example, every single computation touches the root node, roughly half of them touch each of the root's children, etc.
 
-We can bound the complexity of multiple fingerprint computation for disjoint ranges by $\complexity{\abs{S}}$ by performing a more efficient tree traversal which visits any given vertex at most twice. This is simply achieved by starting at the lower boundary of the first range, then tracing the (unique) path to the upper boundary of the first range, which is also the lower boundary of the second range, so from here the path to the upper boundary of the second range can be traced, and so on.
+We can bound the complexity of multiple fingerprint computation for disjoint ranges by $\complexity{\abs{S}}$ by performing a more efficient tree traversal which visits any given vertex at most twice. This is achieved by starting at the lower boundary of the first range, then tracing the (unique) path to the upper boundary of the first range, which is also the lower boundary of the second range, so from here the path to the upper boundary of the second range can be traced, and so on.
 
-Thus we consider a traversal algorithm that traces the shortest path from some vertex $x$ to another vertex $y$ with $x \preceq y$. We express the traversal as a function which takes his arguments some vertex $y$ to search for and a starting vertex $x$, which returns the next vertex on the shortest path from $x$ to the least vertex $z$ such that $y \preceq z$, or $\nil$ if no such $z$ exists or the traversal has finished, i.e. $x = z$.
+Thus we consider a traversal algorithm that traces the shortest path from some vertex $x$ to another vertex $y$ with $x \preceq y$. We express the traversal as a function that takes as arguments some vertex $y$ to search for and a starting vertex $x$, and that then returns either the next vertex on the shortest path from $x$ to the least vertex $z$ such that $y \preceq z$, or $\nil$ if no such $z$ exists or the traversal has finished, i.e. $x = z$.
 
 Since we use the traversal for the computation of fingerprints over successive ranges, the tree is always traversed from a lesser to a strictly greater node. During a traversal, the function can be called with $y \preceq x$, but only if $x$ lies on the shortest path from some $w \prec y$ to $z$. The definition we give does not correctly handle inputs for which this does not hold, it cannot perform backward traversals.
 
@@ -394,7 +398,7 @@ next (Inner l x r _ g p) y
     | otherwise = Nothing -- traversal done
 \end{minted}
 
-Since paths in trees are unique, this traversal touches the same vertices as \texttt{rangeFingerprint} excluding those visited during the execution of \texttt{findInitial}. The fingerprint can thus also be computed during the traversal, by maintaining a single bit of state indicating whether the traversal is in the upward or downward phase:
+Since paths in trees are unique, this traversal touches the same vertices as \texttt{rangeFingerprint}, except those visited during the execution of \texttt{findInitial}. The fingerprint can thus also be computed during the traversal, by maintaining a single bit of state indicating whether the traversal is in the upward or downward phase:
 
 \begin{minted}[mathescape]{haskell}
 data Phase = Up | Down
@@ -409,29 +413,47 @@ isPeak src@(Inner _ _ _ _ _ p) y = (next src y) == p
 -- and the starting vertex of the traversal $\mathtt{x}$.
 computeFingerprint :: D -> Phase -> Node -> U -> U -> (D, Node)
 -- Phase $\mathtt{Up}$ correspondends to computing $\mathtt{accGeq}$.
-computeFingerprint acc Up src@(Leaf v fp _) x y = case (next src y) of
-    Nothing
-        | v < x = (acc, src)
-        | otherwise = (combine emptyFp (liftFp fp) acc, src)
-computeFingerprint acc Up src@(Inner _ v r _ _ _) x y = case (next src y) of
-    Nothing
-        | v < x = (acc, src)
-        | otherwise = (combine emptyFp (liftFp (hash v)) acc, src)
-    Just n
-        | isPeak src y -> computeFingerprint (combine emptyFp (liftFp (hash v)) acc) Down n x y
-        | otherwise && v < x -> computeFingerprint acc Up n x y
-        | otherwise -> computeFingerprint (combine (liftFp (hash v)) (label r) acc) Up n x y
+computeFingerprint acc Up src@(Leaf v fp _) x y =
+     case (next src y) of
+        Nothing
+            | v < x = (acc, src)
+            | otherwise = (combine acc (liftFp fp) emptyFp, src)
+        Just n
+            | v < x = computeFingerprint acc Up n x y
+            | otherwise = computeFingerprint
+                (combine acc (liftFp fp) emptyFp) Up n x y
+computeFingerprint acc Up src@(Inner _ v r _ _ _) x y =
+    case (next src y) of
+        Nothing
+            | v < x = (acc, src)
+            | otherwise = (combine acc (liftFp (hash v)) emptyFp, src)
+        Just n
+            | isPeak src y = computeFingerprint
+                (combine acc (liftFp (hash v)) emptyFp) Down n x y
+            | otherwise && v < x = computeFingerprint acc Up n x y
+            | otherwise = computeFingerprint
+                (combine acc (liftFp (hash v)) (label r)) Up n x y
 -- Phase $\mathtt{Down}$ correspondends to computing $\mathtt{accLt}$.
 computeFingerprint acc Down src@(Leaf v fp _) x y =
-    | v >= x = (acc, src)
+    | v >= y = (acc, src)
     | otherwise = (combine acc (liftFp fp) emptyFp, src)
-computeFingerprint acc Down src@(Inner l v _ _ _ _) x y = case (next src y) of
-    Nothing
-        | v >= y = (acc, src)
-        | otherwise = (combine acc (liftFp (label l) (hash v)), src)
-    Just n
-        | v >= y -> computeFingerprint acc Down n x y
-        | otherwise -> computeFingerprint (combine acc (label l) (liftFp (hash v))) Down n x y
+computeFingerprint acc Down src@(Inner l v _ _ _ _) x y =
+    case (next src y) of
+        Nothing
+            | v >= y = (acc, src)
+            | otherwise = ((combine
+                    acc
+                    (liftFp (label l))
+                    (liftFp (hash v))
+                ), src)
+        Just n
+            | v >= y -> computeFingerprint acc Down n x y
+            | otherwise -> computeFingerprint
+                (combine
+                    acc
+                    (liftFp (label l))
+                    (liftFp (hash v))
+                ) Down n x y
 \end{minted}
 
 By computing the fingerprints of successive ranges via this function, using the output vertex as the starting point for the next traversal, the fingerprints are computed while traversing any edge at most two times (once during a downward traversal, and once during an upward traversal). The overall time complexity for $k$ ranges is thus in $\complexity{\min(k \cdot \log(\abs{S}), \abs{S})}$. Since the function is tail recursive, the space overhead is in $\complexity{1}$.
@@ -459,9 +481,9 @@ Let $\mathcal{S} \defeq (\N^U, \cup, \emptyset)$ be the monoid of multisets over
 We call $\f$ a \defined{multiset homomorphic hash function} if $\f$ is a hash function and a monoid homomorphism from $\mathcal{S}$ to $\mathcal{M}$.
 \end{definition}
 
-A multiset homomorphic hash function allows incrementally maintaining the hash of a multiset under insertions using only $\complexity{1}$ storage space, by storing the hash of the multiset and combining it with the hash of any inserted item. This can be generalized to support deletions as well: by allowing negative multiplicities for multiset items, multisets form a group under union. If the hash function is a group homomorphism, the hash of the multiset can be updated on deletion by subtracting the hash of the deleted item.
+A multiset homomorphic hash function allows to incrementally maintain the hash of a multiset under insertions using only $\complexity{1}$ storage space, by storing the hash of the multiset and combining it with the hash of any inserted item. This can be generalized to support deletions as well: by allowing negative multiplicities for multiset items, multisets form a group under union. If the hash function is a group homomorphism, the hash of the multiset can be updated on deletion by subtracting the hash of the deleted item.
 
-This is more efficient than our approach, which requires $\complexity{n}$ space for the tree structure. This efficiency comes however at the cost of loss of flexibility. As multiset union is commutative, so must be the homomorphic monoid/group of fingerprints. Since our protocols require the ability to compute fingerprints over arbitrary ranges and we need the tree of size $\complexity{n}$ to do so anyways, homomorphic hashing would not yield any space usage benefits, and we thus choose the approach that does not require commutativity.
+This is more efficient than our approach, which requires $\complexity{n}$ space for the tree structure. This efficiency comes however at the cost of a loss in flexibility. As multiset union is commutative, so must be the homomorphic monoid/group of fingerprints. Since our protocols require the ability to compute fingerprints over arbitrary ranges and we need the tree of size $\complexity{n}$ to do so anyways, homomorphic hashing would not yield any space usage benefits, and we thus choose the approach that does not require commutativity.
 
 We additionally want to explicitly work with regular sets, not multisets. The reason why homomorphic hashes operate on multisets is that they admit more natural homomorphisms under union. For example, taking the size of a multiset is a homomorphism into the additive monoid on the natural numbers, whereas this is not true for regular sets, as e.g. $\abs{\set{x, y} \cup \set{y, z}} \neq \abs{\set{x, y}} + \abs{\set{y, z}}$. Set union is however well behaved with respect to taking the size of the sets if it is a disjoint union, i.e. no item occurs in both sets.
 
@@ -528,9 +550,9 @@ Now that we have characterized a family of functions that admit efficient recomp
 
 As the fingerprint of a singleton set $\lift{\f}{\mathcal{M}}(\set{u})$ is equal to $\f(u)$, $\f$ must itself already be a hash function. Typical hash functions map values to bit strings of a certain length, i.e. the codomain is $\set{0, 1}^k$ for some $k \in \N$. We will thus consider monoids whose elements can be represented by such bit strings.
 
-A natural choice of the monoid universe is then $\range{0}{2^k}{\N}$, some simple monoidical operations on this universe include bitwise xor, addition modulo $2^k$, and multiplication modulo $2^k$. In the following, addition and multiplication will always be implicitly taken modulo $2^k$. Note that $\xor$ and addition also admit inverses, so the slightly simplified computational fingerprints can be used.
+A natural choice of the monoid universe is then $\range{0}{2^k}{\N}$, some simple monoidical operations on this universe include bitwise xor, addition modulo $2^k$, and multiplication modulo $2^k$. In the following, addition and multiplication will always be implicitly taken modulo $2^k$. Note that $\xor$ and addition also admit inverses, so the slightly simplified computation of fingerprints can be used.
 
-Of these three options, multiplication is the least suitable, because multiplying $0$ by any number again yields $0$. Consequently for every set containing an item $u$ with $\f(u) = 0$ the fingerprint of the set would also be $0$, which clearly violates the criterion that all possible values for fingerprints occur with equal probability.
+Of these three options, multiplication is the least suitable, because multiplying any number by $0$ yields $0$. Consequently for every set containing an item $u$ with $\f(u) = 0$ the fingerprint of the set would also be $0$, which clearly violates the criterion that all possible values for fingerprints occur with equal probability.
 
 Addition and xor however are particularly well-behaved in that regard, as they form finite commutative groups:
 
@@ -542,7 +564,7 @@ Then $\lift{\f}{\mathcal{G}}$ is a hash function as well.
 \begin{proof}
 We first show that for randomly chosen $x, y, z \in G$ the probability that $\groupadd{x}{y} = z$ is $\frac{1}{\abs{G}}$.
 
-For $x, z \in G$ there is $y \in G$ such that $\groupadd{x}{y} = z$, namely $y \defeq \groupsubtract{z}{x}$ (because $\groupadd{x}{\groupsubtract{z}{x}} \overset{\text{commutativity}}= \groupadd{\groupadd{x}{\inverseadd{x}}}{z} = z$). As $G$ is finite, this $y$ has to be unique, since otherwise that would not be enough elements left that can be added to $x$ to result in all of the $\abs{G} - 1$ possible remaining $z'$. Thus for any fixed $x, z$ the probability that a randomly chosen $y$ satisfies $\groupadd{x}{y} = z$ is $\frac{1}{\abs{G}}$.
+For $x, z \in G$ there is $y \in G$ such that $\groupadd{x}{y} = z$, namely $y \defeq \groupsubtract{z}{x}$ (because $\groupadd{x}{\groupsubtract{z}{x}} \overset{\text{commutativity}}= \groupadd{\groupadd{x}{\inverseadd{x}}}{z} = z$). As $G$ is finite, this $y$ has to be unique, since otherwise there would not be enough elements left that can be added to $x$ to result in all of the $\abs{G} - 1$ possible remaining $z'$. Thus for any fixed $x, z$ the probability that a randomly chosen $y$ satisfies $\groupadd{x}{y} = z$ is $\frac{1}{\abs{G}}$.
 
 Computing $\lift{\f}{\mathcal{G}}(S)$ consists of repeatedly adding group elements which by themselves are distributed uniformly at random if $S$ was chosen randomly and $\f$ is a high quality hash function. Thus the accumulated value after every step is any given $z \in G$ with probability $\frac{1}{\abs{G}}$, as is in particular the probability for the final result being equal to $z$.
 \end{proof}
@@ -557,7 +579,7 @@ While multiplication does not form a group when performed on the numbers in $\ra
 \section{Cryptographically Secure Fingerprints}
 \label{crypto}
 
-In the protocols for synchronizing data structures, fingerprints of sets are used for probabilistic equality checking: sets with equal fingerprints are assumed to be equal. Synchronization can thus become faulty if it involves unequal sets with equal fingerprints. If the universe of possible fingerprints is chosen large enough, and the distribution of fingerprints of randomly chosen sets is random within that universe, the probability for this occurring becomes negligible.
+In the protocols for synchronizing data structures, fingerprints of sets are used for probabilistic equality checking: sets with equal fingerprints are assumed to be equal. Synchronization can thus become faulty if it involves unequal sets with equal fingerprints. If the universe of possible fingerprints is chosen large enough, and the distribution of fingerprints of randomly chosen sets is random within that universe, the probability for this to occur becomes negligible.
 
 Random distribution of input sets is however a very strong assumption. What if a malicious party can influence the sets to be fingerprinted, with the goal of causing fingerprint collisions and consequently triggering faulty behavior of the system? Cryptographically secure fingerprints are an answer to this problem, being chosen such that it is computationally infeasible for an adversary to find inputs that lead to faulty synchronization.
 
@@ -571,14 +593,14 @@ A \defined{secure hash function} is a hash function $\fun{\h}{U}{D}$ that satisf
 
 \begin{description}
   \item[pre-image resistance:] Given $d \in D$, it is computationally infeasible to find a $u \in U$ such that $\h(u) = d$.
-  \item[second pre-image resistance:] Given $u \in U$ it is computationally infeasible to find a $u' \in U, u' \neq u$ such that $\h(u) = \h(u')$.
+  \item[second pre-image resistance:] Given $u \in U$, it is computationally infeasible to find a $u' \in U, u' \neq u$ such that $\h(u) = \h(u')$.
   \item[collision resistance:] It is computationally infeasible to find $u, v \in U, u ~= v$ such that $\h(u) = \h(v)$.
 \end{description}
 \end{definition}
 
 Pre-image resistance has no influence on the vulnerability of the protocol to malicious actors, so all of the following discussion will focus on collision resistance only.
 
-Since $\lift{\f}{\mathcal{M}}(\set{u}) = \f(u)$, $\f$ must necessarily be collision resistant if $\lift{\f}{\mathcal{M}}$ is to be collision resistant. This alone is unfortunately not sufficient, we will see a specific counterexamples in the following subsections. Choosing a secure hash function $\f$ always comes with a performance cost, insecure hash functions usually take less time and less space to compute. If the synchronization protocol is only being run in a trusted environment, an insecure hash function might be preferable.
+Since $\lift{\f}{\mathcal{M}}(\set{u}) = \f(u)$, $\f$ must necessarily be collision resistant if $\lift{\f}{\mathcal{M}}$ is to be collision resistant. This alone is unfortunately not sufficient, we will see a specific counterexamples in \cref{{specific-monoids}}. Choosing a secure hash function $\f$ always comes with a performance cost, insecure hash functions usually take less time and less space to compute. If the synchronization protocol is only being run in a trusted environment, an insecure hash function might be preferable.
 
 Whether a hash function is secure is not a binary dichotomy, but depends on what is considered ``feasible'' for an adversary. Greater security can usually be obtained at the cost of longer digests and longer computation times. Before presenting options for secure hash functions, we thus examine the impact of hash collisions first.
 
@@ -606,11 +628,11 @@ In a system with a consensus mechanism among all participating nodes, the choice
 \subsection{Specific Monoids}
 \label{specific-monoids}
 
-Multiplication, addition and xor as a way of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
+Multiplication, addition and xor as ways of combining hashes have been studied in \cite{bellare1997new}, in the context of hashing sequences, of which our ordered sets are a special case. Their setting requires not only associativity but also commutativity. They thoroughly break xor by reducing the problem of finding a collision to that of solving a system of linear equations. We will not restate the full attack, but we will describe a weaker but simpler mechanism based on similar ideas that allows finding subsets whose fingerprint is a specific target value. This can be used as an optimization in a trusted setting (see \cref{subset-checks}).
 
 The main observation is that xor is the additive operation in $\mathds{F}_2$, the finite field on two elements $\set{0, 1}$. A fingerprint can be interpreted as a vector $\begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$. The fingerprint of a set $S = \set{s_1, s_2, \ldots, s_n}$ can thus be computed as the sum (within $\mathds{F}_2$, i.e. as the xor) of the vectors corresponding to $s_1, s_2, \ldots, s_n$. The fingerprint of some $S' \subseteq S$ can also be regarded as the sum over all vectors, but each vector being first multiplied with a coefficient of $1$ if $s_i \in S'$ and coefficient $0$ if $s_i \notin S'$. In other words, the fingerprint of $S'$ is a linear combination of the hashes of the items in $S$.
 
-This enables us to efficiently find subsets whose fingerprint are a particular vector. Let $S = \set{s_1, s_2, \ldots, s_n}$ be a set of items, and let $b = \begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$ be the target fingerprint. For $0 < i \leq n$ define $a_i = \begin{bmatrix}a_{i, 1} & a_{i, 2} & \ldots & a_{i, k}\end{bmatrix} \in \set{0, 1}^{1 \times k}$ to be $\f(s_i)$ interpreted as a vector over $\mathds{F}_2$. The coefficients for linear combinations of the $a_i$ equal to $b$ are the solutions to the following system of linear equations over $\mathds{F}_2$:
+This enables us to efficiently find subsets whose fingerprint are a particular vector. Let $S = \set{s_1, s_2, \ldots, s_n}$ be a set of items, and let $b = \begin{bmatrix}b_1 & b_2 & \ldots & b_k\end{bmatrix} \in \set{0, 1}^{1 \times k}$ be the target fingerprint. For $0 < i \leq n$, define $a_i = \begin{bmatrix}a_{i, 1} & a_{i, 2} & \ldots & a_{i, k}\end{bmatrix} \in \set{0, 1}^{1 \times k}$ to be $\f(s_i)$ interpreted as a vector over $\mathds{F}_2$. The coefficients for linear combinations of the $a_i$ equal to $b$ are the solutions to the following system of linear equations over $\mathds{F}_2$:
 
 \[
 \begin{bmatrix}
@@ -731,7 +753,7 @@ combine Nothing (Just b) (Just c) = Just (hash (concat b c))
 combine (Just a) (Just b) (Just c) = Just (hash (concat (concat a b) c))
 \end{minted}
 
-While the tree traversal and accumulation of data otherwise stays the same, the nature of the correctness argument changes quite a bit, since we cannot rely on associativity of \texttt{combine} anymore. Instead, the core idea of the argument is that the computed fingerprint depends only on the relative positioning between the tree vertices within the range, which stays identical no matter how many vertices outside the range are added.
+While the tree traversal and accumulation of data otherwise stays the same, the nature of the correctness argument changes quite a bit, since we cannot rely on the associativity of \texttt{combine} anymore. Instead, the core idea of the argument is that the computed fingerprint depends only on the relative positioning between the tree vertices within the range, which stays identical no matter how many vertices outside the range are added.
 
 Recall that the shape of a treap is always that of the tree obtained by inserting items sorted by decreasing priority without rebalancing. Now consider the vertex $v$ with the smallest distance to the root $r$ such that $x \preceq v \prec y$, i.e. the vertex computed by \texttt{findInitial}. All items within $\range{x}{y}{S}$ are contained in $\V(T_v)$. The fingerprint computation for the range is clearly local to $T_v$, and while insertion of items outside that tree might change the path from $r$ to $v$, they do not change the shape of $T_v$.
 
@@ -753,7 +775,7 @@ Let $v$ be the root of a tree $T_v$ and $x \in U$. We show by induction on $\abs
 \begin{align*}
 \mathtt{(accGeq\ v\ x)} &\overset{def}= \mathtt{(accGeq\ c_{>}\ x)}\\
 &\overset{IH}= \tlabel{\h}(c_{>})\\
-&\overset{v \prec x}= tlabel{\h}(v)\\
+&\overset{v \prec x}= tlabel{\h}(v).\\
 \end{align*}
 
 \case Otherwise, $x \preceq v$. Neither $v$ nor any vertex in $T_{c_{<}}$ has any influence on the shape of $T_{c_{>}}$. We thus have:
@@ -762,7 +784,7 @@ Let $v$ be the root of a tree $T_v$ and $x \in U$. We show by induction on $\abs
 \mathtt{(accGeq\ v\ x)} &\overset{def}= \mathtt{(combine\ (accGeq\ c_{<}\ x)\ \h(v) \tlabel{\h}(c_{>}))}\\
 &\overset{IH}= \mathtt{(combine\ \tlabel{\h}(c_{<})\ \h(v) \tlabel{\h}(c_{>}))}\\
 &\overset{def}= \tlabel{\h}(\tlabel{\h}(c_{<}) \concatenate \h(v) \concatenate \tlabel{\h}(c_{>}))\\
-&\overset{def}= \tlabel{\h}(v)\\
+&\overset{def}= \tlabel{\h}(v).\\
 \end{align*}
 \end{caselist}
 \end{proof}
@@ -865,7 +887,7 @@ An example skip list, demonstrating the layers of sorted linked lists. The $\bot
 
 To define a pseudorandom skip list, we again fix some cryptographically secure hash function $\fun{\p}{U}{\set{0, 1}^k}$, and determine the layers of an item $u$ by counting the number of leading zero bits of $\p(u)$ and adding one.
 
-Toward a fingerprinting scheme, we define a labeling over all items in all layers. Let $u_{l, i}$ denote the $i$-th item in layer $l$, recall that $\h$ is some cryptographically secure Hash function.
+Toward a fingerprinting scheme, we define a labeling over all items in all layers. Let $u_{l, i}$ denote the $i$-th item in layer $l$, recall that $\h$ is some cryptographically secure hash function.
 Then $\sllabel{\h}(u_{0, i}) \defeq \h(u_{0, i})$ and $\sllabel{\h}(u_{l + 1, i}) \defeq \h(\sllabel{\h}(u_{l, j}) \cdot \h( \sllabel{\h}(u_{l, j + 1}) \cdot \h(\ldots \cdot \sllabel{\h}(u_{l, j + m}))))$ where $(u_{l, j} \ldots u_{l, j + m})$ is the longest subsequence of layer $l$ such that $u_{l, j} = u_{l + 1, i}$ and $u_{l, j + m} \prec u_{l + 1, i + 1}$. \Cref{fig:skip-list-flow} visualizes an example.
 
 \begin{figure*}
@@ -936,7 +958,7 @@ A visualization of which labels influence which other labels. One can see that t
 \label{fig:skip-list-flow}
 \end{figure*}
 
-Every label contributes to the computation of at most one other label, which is located on the next layer. Maintaining labels when inserting or deleting an item thus takes a number of hash computations bounded by the height of the skip list, which is expected $\complexity{\log(n)}$. The number of labor concatenations that need to be performed at each layer is also randomized, but on average there are two, as the probability for an item to also occur at the next layer is $\frac{1}{2}$. The expected time thus stays in $\complexity{\log(n)}$.
+Every label contributes to the computation of at most one other label, which is located on the next layer. Maintaining labels when inserting or deleting an item thus takes a number of hash computations bounded by the height of the skip list, which is expected $\complexity{\log(n)}$. The number of label concatenations that need to be performed at each layer is also randomized, but on average there are two, as the probability for an item to also occur at the next layer is $\frac{1}{2}$. The expected time thus stays in $\complexity{\log(n)}$.
 
 Denote by $\skipdomain(u_{l, i})$ the set of items $u$ such that $u_{l, i} \preceq u \prec u_{l, i + 1}$, i.e. the set of all items whose hash contributes to the label of $u_{l, i}$. Now let $S \subseteq U$ be a finite set. The fingerprint of $S$ is defined as $\nil$ if $S = \emptyset$, and otherwise as $\h(u_{l_0, i_0} \cdot \h(u_{l_1, i_1} \cdot \h(\ldots \cdot u_{l_m, i_m})))$ where $(u_{l_0, i_0}, u_{l_1, i_1}, \ldots, u_{l_m, i_m})$ is the unique shortest sequence of vertices in the pseudorandom skip list on $S$ such that its items are strictly increasing and their $\skipdomain$s partition $S$, choosing the vertex of the highest possible layer if multiple vertices have equal domains. See \cref{fig:skip-list-fingerprint} for an example.
 
@@ -1055,7 +1077,7 @@ Let $\bar{u} = (u_0, u_1, \ldots, u_m)$ be the shortest path in the skip list fr
 \end{scaletikzpicturetowidth}
 
 \caption{
-The forward search path to $\exampleg$ (red) and the backward search path to $\exampleb$ (blue) allow to read off which vertices contribute to the fingerprint of $\range{\exampleb}{\exampleg}{S}$.
+The forward search path to $\exampleg$ (starting at the top-left corner) and the backward search path to $\exampleb$ (starting at the top-right corner) allow to read off which vertices contribute to the fingerprint of $\range{\exampleb}{\exampleg}{S}$.
 }
 
 \label{fig:skip-list-fingerprint-traversal}
