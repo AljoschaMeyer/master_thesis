@@ -1,0 +1,12 @@
+% !TEX root = main.tex
+
+\thispagestyle{plain}
+\begin{center}
+    \Large
+    \vspace{0.9cm}
+    \textbf{Kurzfassung}
+\end{center}
+
+Bei der \textit{set reconcilliation} handelt es sich um das Problem, die Vereinigung zweier Mengen zu berechnen, welche auf unterschiedlichen Maschienen gespeichert sind. Das \textit{set mirroring} Problem besteht darin, eine dieser Mengen so zu aktualisieren, dass sie gleich der anderen wird. Die optimale Kommunikationskomplexität erfordert, dass die Zahl der übermittelten Bits mindestens proportional zu $n_{\triangle}$, der Anzahl an Elementen die in exakt einer der beiden Mengen vorkommen, ist. Es gibt zwar ausgeklügelte \textit{set reconcilliation} Protokolle die dieses Optimum erreichen, aber die Zahl der benötigten Berechnungsschritte ist proportional zur Größe der Mengen, und der Speicherbedarf ist proportional zu $n_{\triangle}$. Außerdem können sie nicht angepasst werden um das \textit{set mirroring} Problem zu lösen.
+
+Die \textit{range-based set synchronization} ist ein unkomplizierterer Ansatz, der beide Probleme lösen kann. Er basiert darauf, rekursiv Fingerabdrücke von im Falle von ungleichen Fingerabdrücken immer kleiner werdenden Teilbereichen der Mengen zu vergleichen. Die Anzahl an Bits die dafür übertragen werden müssen ist zwar um einen logarithmischen Faktor größer als bei einer optimalen Lösung, aber dafür ist die Zahl der Berechnungsschritte proportional zu $n_{\triangle}$, und der Speicherbedarf für die Berechnungen ist konstant.

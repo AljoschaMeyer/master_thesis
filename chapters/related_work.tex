@@ -60,7 +60,7 @@ Creating the IBLT requires $\complexity{\abs{X_i}}$ time for node $\mathcal{X}_i
 
 Similar to the CPI approach, the nodes need an estimate of the size of the set difference before they can perform reconciliation. The authors present a single-message estimation protocol for the set difference that uses IBLTs as well. The size of the message is in $\complexity{\log(\abs{U})}$. Both creating or receiving and using the message requires $\complexity{X_i}$ time for node $\mathcal{X}_i$ and $\complexity{\log(\abs{U})}$ space.
 
-Overall, the IBLT approach achieves set reconciliation in a single round trip, transmitting only $\complexity{n_{\triangle} + \log(\abs{U})}$ bits. The computational cost is however linear in the size of the sets, and the space requirements for the computation are in $\complexity{n_{\triangle}}$, which can cause trouble the case of lopsided reconciliation sessions.
+Overall, the IBLT approach achieves set reconciliation in a single round trip, transmitting only $\complexity{n_{\triangle} + \log(\abs{U})}$ bits. The computational cost is however linear in the size of the sets, and the space requirements for the computation are in $\complexity{n_{\triangle}}$, which can cause trouble in the case of lopsided reconciliation sessions.
 
 \subsection{Other Bloom Filter Approaches}
 
